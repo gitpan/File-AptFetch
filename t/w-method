@@ -1,0 +1,34 @@
+#!/usr/bin/perl
+# $Id: w-method 8 2009-04-11 18:21:15Z whynot $
+
+package main;
+
+use strict;
+use warnings;
+use IO::Handle;
+
+use version 0.50; our $VERSION = qv q|0.0.1|;
+
+STDOUT->autoflush(1);
+
+my $fn = <DATA>;
+chomp $fn;
+open STDERR, q|>|, $fn or
+  die qq|open (STDERR) failed: $!|;
+
+$SIG{$_} = sub { my $sig = shift @_; warn qq|{{{$sig}}}\n|; exit 0; }
+  foreach grep -1 == index($_, '_'), keys %SIG;
+
+print <<'END_OF_CAPS';
+100 Capabilities
+Version: 1.0
+Single-Instance: true
+Local-Only: true
+Send-Config: true
+
+END_OF_CAPS
+
+1 while(<STDIN>);
+
+# vim: set filetype=perl
+

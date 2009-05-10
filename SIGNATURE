@@ -1,0 +1,39 @@
+This file contains message digests of all files listed in MANIFEST,
+signed via the Module::Signature module, version 0.55.
+
+To verify the content in this distribution, first make sure you have
+Module::Signature installed, then type:
+
+    % cpansign -v
+
+It will check each file's integrity, as well as the signature's
+validity.  If "==> Signature verified OK! <==" is not displayed,
+the distribution may already have been compromised, and you should
+not run its Makefile.PL or Build.PL.
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+SHA1 d810ae3ed2016f75b8c495bd5109cf1668bfb39a Build.PL
+SHA1 33a2149445cb39b7e44a1e762a8308f91f42fa1b Changes
+SHA1 4a0980554a6993d532d658e2f394c4910da34693 MANIFEST
+SHA1 4468ac7d8e65f3c7ee347b860bb07d8044fc68c1 META.yml
+SHA1 8117bbb75a119fe8e3b85be7e84f1f8ed300d2a3 README
+SHA1 408a8ef5052b81b42f90cfff0a6990afae22c65a lib/File/AptFetch.pm
+SHA1 7b7b0846f6588112eb8c411220b2ffe9948df203 lib/File/AptFetch/Cookbook.pod
+SHA1 0306154e7bea126be8e919563da9b808c962ef6b t/DB.pm
+SHA1 0e8322adedd4f639ec5810144333c714f1fdfcd8 t/TestSuite.pm
+SHA1 c40f3a396c6375aaa6e583365aad31383d593465 t/copy.t
+SHA1 262991e04358ab48102431bc697385ac31f283fe t/file.t
+SHA1 67121027aeb125ea54358f2ed3bf13a9c5f748a1 t/void.t
+SHA1 c993edc7fa3d4adfd06fdfd4a11a541e895b377d t/w-method
+SHA1 a0d0b46593bc4192e00b6c93eec698c1f597d603 t/x-method
+SHA1 208486be6833b90ac37d964a35a70872cd901491 t/y-method
+SHA1 f09ac1144b20df417f48e72b0fde02ffedf7a5a8 t/z-method
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (GNU/Linux)
+
+iD8DBQFKBg421qsM9O+FbKQRAoy1AKDvJTvthRo2qlWW+7sRNq/IDBXvDwCgyIqI
+jIh/M1dskRySPAWVUShLsY0=
+=Nztc
+-----END PGP SIGNATURE-----

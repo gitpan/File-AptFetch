@@ -1,0 +1,30 @@
+#!/usr/bin/perl
+# $Id: z-method 8 2009-04-11 18:21:15Z whynot $
+
+package main;
+
+use strict;
+use warnings;
+use IO::Handle;
+
+use version 0.50; our $VERSION = qv q|0.0.3|;
+
+STDOUT->autoflush(1);
+
+my $fn = <DATA>;
+chomp $fn;
+open STDERR, q|>|, $fn or
+  die qq|open (STDERR) failed: $!|;
+
+while(<DATA>)  {
+    chomp;
+    print STDERR qq|[$_]\n|;
+    print STDOUT qq|$_\n|;
+    $_ or last; };
+
+while(<STDIN>)              {
+    chomp;
+    print STDERR qq|{$_}\n|; };
+
+# vim: set filetype=perl
+

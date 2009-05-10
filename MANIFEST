@@ -1,0 +1,17 @@
+Build.PL
+Changes
+lib/File/AptFetch.pm
+lib/File/AptFetch/Cookbook.pod
+MANIFEST
+README
+t/copy.t
+t/DB.pm
+t/file.t
+t/TestSuite.pm
+t/void.t
+t/w-method
+t/x-method
+t/y-method
+t/z-method
+META.yml
+SIGNATURE    Added here by Module::Build

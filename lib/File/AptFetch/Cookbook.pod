@@ -1,9 +1,12 @@
-
 =pod
 
-=for comment $Id: Cookbook.pod 12 2009-05-09 22:15:56Z whynot $
+=for comment $Id: Cookbook.pod 354 2009-05-09 22:15:56Z whynot $
 
-=for comment $VERSION = qv q|0.0.2|;
+=for comment $VERSION = qv q|0.0.3|;
+
+=for comment AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
+
+=for comment CC-SA
 
 =head1 NAME
 
@@ -147,6 +150,12 @@ To fix this I need to do some work -- it's undone yet.
 
 As you can see, there's no message what would require status.
 It's up to the method to report any progress.
+(I<v.0.0.8>)
+Alas, they doesn't.
+Thus, that's up to application to count any progress.
+Me wonders if they timeout at all.
+However, there're signs that those of networking type properly detect if
+underlying TCP/IP connection has been lost.
 
 =head1 HEADER FIELDS
 
@@ -156,7 +165,7 @@ manual.
 
 B<Header fields> are spelled first-capital (regular words) and
 all-capital (abbreviations).
-I can't comment what would happed otherwise.
+I can't comment what would happen otherwise.
 
 =over
 
@@ -325,6 +334,12 @@ File requests when you need something, and then check for completion.
 =item APP E<lt>- "200 URI Start" E<lt>- MTD
 
 That seems to be purely informational.
+(I<v0.0.8>)
+In fact that's not.
+If connection is ruined somehow (monkey-wrench on ISP?)
+then the method restarts transfer and manifests this this way.
+Once, I've seen it five times in row.
+I can't comment if method would give up ever.
 
 =item APP E<lt>- "201 URI Done" E<lt>- MTD
 
@@ -464,6 +479,14 @@ then the method complains about invalid URI.
 
 =back
 
+=head2 networking methods
+
+Thorough testing of networking methods pending.
+However, I'm pretty sure that default timeout of 2min is enough for now.
+Methods itself seem to timeout itself within that frame.
+However, I can't say how many times networking methods would reconnect before
+giving up.
+
 =head1 SEE ALSO
 
 L<File::AptFetch>,
@@ -476,10 +499,10 @@ Eric Pozharski, E<lt>whynot@cpan.orgZ<>E<gt>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2009 by Eric Pozharski
+Copyright 2009, 2010 by Eric Pozharski
 
 This overview is free in sense: AS-IS, NO-WARANRTY, HOPE-TO-BE-USEFUL.
-This overview is released under GNU FDPLv3 with no Invariant sections and no Cover Texts.
+This overview is released under CC-SA.
 
 =cut
 

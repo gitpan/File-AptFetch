@@ -1,10 +1,12 @@
 #!/usr/bin/perl
-# $Id: file.t 12 2009-05-09 22:15:56Z whynot $
+# $Id: file.t 354 2009-05-09 22:15:56Z whynot $
 
-package main;
 use strict;
 use warnings;
-use version 0.50;
+
+package main;
+use version 0.50; our $VERSION = qv q|0.0.7|;
+
 use t::TestSuite qw|
   FAF_wrap_stderr FAF_unwrap_stderr FAF_fetch_stderr
   FAF_safe_wrapper FAF_wait_and_gain
@@ -15,7 +17,7 @@ use Test::More;
 use File::Temp   qw| tempdir tempfile |;
 use Cwd;
 
-our $VERSION = qv q|0.0.6|;
+File::AptFetch::ConfigData->set_config( timeout => 10 );
 
 my @fn;
 our %units;

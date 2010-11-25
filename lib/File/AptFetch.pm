@@ -1,11 +1,13 @@
-# $Id: AptFetch.pm 11 2009-05-04 11:02:26Z whynot $
-
-package File::AptFetch;
+# $Id: AptFetch.pm 353 2009-05-04 11:02:26Z whynot $
+# Copyright 2009, 2010 Eric Pozharski <whynot@pozharski.name>
+# AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
+# GNU LGPLv3
 
 use warnings;
 use strict;
 
-use version 0.50; our $VERSION = qv q|0.0.7|;
+package File::AptFetch;
+use version 0.50; our $VERSION = qv q|0.0.8|;
 
 use File::AptFetch::ConfigData;
 use IO::Pipe;
@@ -135,7 +137,7 @@ Right now, clean I<@$diag> yourself, if that becomes an issue.
 You're supposed to maintain a balance of requests and fetches.
 If you try L</gain> when there's no unfinished requests,
 then method will timeout.
-There's nothing to worry about actually except hanging for 10sec.
+There's nothing to worry about actually except hanging for 120sec.
 
 =back
 
@@ -152,7 +154,7 @@ mentioned in nearest synopsis.
 
 =item Explicit values in descriptive codes
 
-They always refer to some value in neares code.
+They always refer to some value in nearest code.
 C<$method>, C<$?> etc means that
 there would be some value that has some relation with named something.
 POD markup in descriptions means exactly that.
@@ -182,6 +184,29 @@ I hope it's clear from context is that B<header> down- or up-stream.
 
 B<(note)> Through out this POD "log item" means one line in I<@$log>;
 "log entry" means sequence of log items including terminating empty item.
+
+B<(note)>
+Through out this POD "120sec timeout" means: "I<$timeout> in
+B<File::AptFetch::ConfigData> being left as set in stock distribution,
+overriden while pre-build configuring, or set at run-time".
+
+=head1 IMPORTANT NOTE ON B<PERL-5.10.0>
+
+It's neither bug nor caveat.
+And it's out of my hands, really.
+B<perl-5.10.0> exits application code differently if compared with
+B<perl-5.10.1> (unbelievable?).
+My understanding is that B<v5.10.0> closes handles first, then B<DESTROY>s.
+Sometimes that filehandle closing happens in right order.
+But most probably application is killed with I<$SIG{CHLD}>.
+B<END{}> doesn't help --- that filehandle masacre happens before those blocks
+are run.
+I believe, whatever tinkering with the global I<$SIG{CHLD}> is a bad idea.
+And terminating every method just after transfers have finished is same
+stupid.
+Thus, if you run B<perl-5.10.0> (probably any earlier too) destroy the
+B<File::AptFetch> object explicitly before B<exit>ing app, if you care about
+to be not I<$SIG{CHLD}>ed.
 
 =head1 METHODS
 
@@ -235,10 +260,9 @@ The exit code (no postprocessing at all) is provided in braces.
 
 =item CZ<>E<lt>$methodZ<>E<gt>: timeouted without handshake
 
-I<$method> failed to configure within time frame provided (10sec, I think
-fairly reasonable time).
-The timeout would be configurable in some other release (just in case your
-methods happen to be B<Moose>d Perl scripts).
+I<$method> failed to configure within time frame provided.
+(I<v.0.0.8>)
+L</_read> has more about timeouts.
 
 =item CZ<>E<lt>$methodZ<>E<gt>: ($Status): that's supposed to be (100) (Capabilities)
 
@@ -258,68 +282,62 @@ L</_cache_configuration> -- those can emit their own give-up codes
 
 my @apt_config;
 
-sub init                     {
+sub init        {
     my $cls = shift @_;
     my $self = { };
-    $self->{method} = shift @_ or
-      return q|I<method> is unspecified|;
+    $self->{method} = shift @_          or return q|I<method> is unspecified|;
     $self->{log} = [ ];
+    $self->{timeout} = File::AptFetch::ConfigData->config( q|timeout| );
     bless $self, $cls;
     my $rc;
-    return $rc
-      if $rc = $self->_cache_configuration;
-    return qq|C<$self->{method}>: (I<lib_method>): neither preset nor found|
-      unless File::AptFetch::ConfigData->config(q|lib_method|);
+    $rc = $self->_cache_configuration                          and return $rc;
+    File::AptFetch::ConfigData->config( q|lib_method| )              or return
+      qq|C<$self->{method}>: (I<lib_method>): neither preset nor found|;
     $self->{it} = IO::Pipe->new;
     $self->{me} = IO::Pipe->new;
 
-    defined($self->{pid} = fork) or
-      die qq|fork ($self->{method}) failed: $!|;
+    defined( $self->{pid} = fork )                                      or die
+      qq|fork ($self->{method}) failed: $!|;
 
-    unless($self->{pid})          {
+    unless( $self->{pid} )   {
         $self->{me}->writer;
         $self->{it}->reader;
-        $self->{me}->autoflush(1);
-        $self->{it}->autoflush(1);
-        open STDOUT, q|>&=|, $self->{me}->fileno or
-          die qq|dup (STDOUT) failed: $!|;
-        open STDIN, q|<&=|, $self->{it}->fileno  or
-          die qq|dup (STDIN) failed: $!|;
-        exec sprintf
-          q|%s/%s|,
-          File::AptFetch::ConfigData->config(q|lib_method|),
-          $self->{method} or
-          die qq|exec failed: $!|; };
+        $self->{me}->autoflush( 1 );
+        $self->{it}->autoflush( 1 );
+        open STDOUT, q|>&=|, $self->{me}->fileno                        or die
+          qq|dup (STDOUT) failed: $!|;
+        open STDIN, q|<&=|, $self->{it}->fileno                         or die
+          qq|dup (STDIN) failed: $!|;
+        exec sprintf q|%s/%s|,
+          File::AptFetch::ConfigData->config( q|lib_method| ),
+          $self->{method}                                               or die
+          qq|exec failed: $!| }
 
     local $SIG{PIPE} = q|IGNORE|;
     $self->{it}->writer;
     $self->{me}->reader;
-    $self->{it}->autoflush(1);
-    $self->{me}->autoflush(1);
+    $self->{it}->autoflush( 1 );
+    $self->{me}->autoflush( 1 );
     $self->{diag} = [ ];
 
     $rc = qq|601 Configuration\n|;
-    $rc .= qq|Config-Item: $_\n|
-      foreach @apt_config;
+    $rc .= qq|Config-Item: $_\n|                          foreach @apt_config;
     $rc .= "\n";
-    $self->{it}->print($rc);
+    $self->{it}->print( $rc );
 
     $rc = $self->_read;
-    return
-      qq|C<$self->{method}>: ($self->{CHLD_error}): died without handshake|
-      if $self->{CHLD_error};
-    return qq|C<$self->{method}>: timeouted without handshake|
-      unless @{$self->{log}} && !$self->{log}[-1];
+    $self->{CHLD_error}                                             and return
+      qq|C<$self->{method}>: ($self->{CHLD_error}): died without handshake|;
+    @{$self->{log}} && !$self->{log}[-1]                             or return
+      qq|C<$self->{method}>: timeouted without handshake|;
 
-    return $rc
-      if $rc = $self->_parse_status_code;
-    return
-      qq|C<$self->{method}>: ($self->{Status}): that's supposed to be (100) (Capabilities)|
-      unless $self->{Status} == 100;
-    return $rc
-      if $rc = $self->_parse_message;
+    $rc = $self->_parse_status_code                            and return $rc;
+    $self->{Status} == 100                                           or return
+      qq|C<$self->{method}>: ($self->{Status}): | .
+      q|that's supposed to be (100) (Capabilities)|;
+    $rc = $self->_parse_message                                and return $rc;
 
-    return $self; };
+    return $self }
 
 =item B<DESTROY>
 
@@ -432,6 +450,7 @@ sub request   {
         my $uri = ref $source ? $source->{uri} : $source;
         $uri or return
           qq|C<$self->{method}>: ($filename): URI is undefined|;
+        $self->{trace}{$filename} = '';
         $log .= <<"END_OF_LOG";
 600 URI Acquire
 URI: $self->{method}:$uri
@@ -471,7 +490,7 @@ Supposedly, shouldn't happen.
 
 =item CZ<>E<lt>$methodZ<>E<gt>: timeouted
 
-The APT's method has sitten silently all the time.
+The APT's method has sat silently all the time.
 The possible cause would be you've run out of requests
 (than the method has nothing to do at all
 (they don't tick after all)).
@@ -633,7 +652,7 @@ That B<close> failed with I<$!>.
 
 =item CZ<>E<lt>$methodZ<>E<gt>: (CZ<>E<lt>apt-configZ<>E<gt>): timeouted
 
-While processing a fair 10sec timeout is given
+While processing a fair 120sec timeout is given
 (it's reset after each I<$line>).
 I<@$config_source> hanged for that time.
 
@@ -773,6 +792,48 @@ If child timeouts, then I<$ALRM_error> is set
 (to TRUE, otherwise meaningles).
 Then finishes.
 
+(I<v0.0.8>)
+And more about what timeout is.
+It was believed, that methods pulse their progress.
+That belief was in vain.
+Thus for now:
+
+=over
+
+=item *
+
+The timeout is configurable through I<$timeout>
+(in B<File::AptFetch::ConfigData>)
+(120sec, by stock configuration;
+no defaults.)
+
+=item *
+
+The timeout is cached in each instance of B<File::AptFetch> object.
+
+=item *
+
+Target filenames are cached in the B<File::AptFetch> object too.
+
+=item *
+
+If the cycle of B<_read()> has been timeouted then each target filename is
+checked for size change.
+
+=item *
+
+If any target file has changed then request processing is considered to be in
+progress yet, and the next cycle is started
+(as if method has reported anything.)
+
+=item *
+
+B<(bug)>
+It's clear, that's the place were user-provided callback should be called.
+Although it's not the case yet.
+
+=back
+
 =item child exits
 
 The child is B<waitpid>ed, then I<$CHLD_error> is set,
@@ -788,36 +849,44 @@ Then it dies.
 
 =cut
 
-sub _read      {
+sub _read     {
     my $self = shift @_;
 
     $self->{ALRM_error} = 0;
-    while(1)                {
+    while( 1 )       {
         my $line;
         local $SIG{ALRM} = q|IGNORE|;
-        eval                    {
-            local $SIG{ALRM} = sub { die qq|ALRM!!!\n|; };
-            alarm 10;
-            defined($line = $self->{me}->getline) or
-              die qq|CHLD!!!\n|; };
+        eval               {
+            local $SIG{ALRM} = sub { die qq|ALRM!!!\n| };
+            alarm $self->{timeout};
+            defined( $line = $self->{me}->getline )                     or die
+              qq|CHLD!!!\n| };
         alarm 0;
-        if($@ eq qq|ALRM!!!\n|)    {
+        if( $@ eq qq|ALRM!!!\n| )    {
+            my $rc;
+            foreach my $fn ( keys %{$self->{trace}} ) {
+                -f $fn                                                or next;
+                $self->{trace}{$fn} ||= 0;
+                $rc += ( -s $fn ) - $self->{trace}{$fn};
+                $self->{trace}{$fn} = -s _             }
+            $rc                                                      and next;
             $self->{ALRM_error} = 1;
-            last;                   }
-        elsif($@ eq qq|CHLD!!!\n|) {
+            last                      }
+        elsif( $@ eq qq|CHLD!!!\n| ) {
 # FIXME: Should timeout B<waitpid>.
             waitpid $self->{pid}, 0;
             $self->{CHLD_error} = $?;
-            last;                   }
-        elsif($@)                  {
+            last                      }
+        elsif( $@ )                  {
 # XXX: Shouldn't be here.
-            die $@;                 };
+            die $@                    }
         chomp $line;
         push @{$self->{log}}, $line;
 # XXX: Trust no-one...
-        last if $line eq ''; };
+        last                                                                if
+          $line eq '' }
 
-    return q||; };
+    return q|| }
 
 =back
 
@@ -833,7 +902,7 @@ Eric Pozharski, E<lt>whynot@cpan.orgZ<>E<gt>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2009 by Eric Pozharski
+Copyright 2009, 2010 by Eric Pozharski
 
 This library is free in sense: AS-IS, NO-WARANRTY, HOPE-TO-BE-USEFUL.
 This library is released under GNU LGPLv3.

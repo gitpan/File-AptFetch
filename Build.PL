@@ -1,11 +1,11 @@
 #!/usr/bin/perl
-# $Id: Build.PL 12 2009-05-09 22:15:56Z whynot $
+# $Id: Build.PL 417 2010-11-13 13:05:22Z whynot $
 
-package main;
 use strict;
 use warnings;
 
-use version 0.50; our $VERSION = qv q|0.0.5|;
+package main;
+use version 0.50; our $VERSION = qv q|0.0.6|;
 
 use Module::Build 0.20;
 
@@ -15,7 +15,7 @@ B<File::AptFetch> provides API for APT (Advanced Package Tool, that's the
 Debian package management system) methods.
 APT methods aren't libraries, they are executables
 (placed, by default, in
-F<Z<>E<sol>varZ<>E<sol>libZ<>E<sol>aptZ<>E<sol>methods>).
+F</var/lib/apt/methods>).
 So it's not XS (and can't be), B<F::AF> forks.
 However one doesn't need fork for each file or session.
 The IPC is B<pipe>
@@ -136,6 +136,18 @@ Required.
 Names a signal that will be sent to method.
 L<File::AptFetch/DESTROY> has more.
 
+=cut
+
+$builder->config_data( timeout => 120 );
+
+=item C<timeout>
+
+(I<v.0.0.8>)
+Required.
+I've believed, that could stay hardcoded.
+I was wrong.
+L<File::AptFetch/_read> has more.
+
 =back
 
 =cut
@@ -150,7 +162,7 @@ Two things should be tested in regard with B<F::AF>:
 
 =item methods and structures
 
-I wouldn't say I'm happy with this part (F<tZ<>E<sol>void.t>).
+I wouldn't say I'm happy with this part (F<t/void.t>).
 It's mostly a crash-type testing.
 And a problem here is that I'm not completely sure what an input (from methods
 side) here could be.
@@ -162,7 +174,7 @@ And I<cdrom> method, among them, is no way touched.
 Remote methods are missing from the test-suite.
 This problem is easily fixable -- some kind Perlist could upload on CPAN some
 modules, in B<Test> namespace, what would provide fake servers of
-http:E<sol>E<sol>, ftp:E<sol>E<sol>, rsh:E<sol>E<sol> etc protocols.
+http://, ftp://, rsh:// etc protocols.
 Anyone?
 
 =back
@@ -170,8 +182,8 @@ Anyone?
 And one note.
 B<F::AF> is absolutely useles outside APT based world
 (I'm not about F<*.deb>, I'm about APT).
-Then F<tZ<>E<sol>file.t> and F<tZ<>E<sol>copy.t> skip completely.
-Meanwhile F<tZ<>E<sol>void.t> enables some cute workaround, that would provide
+Then F<t/file.t> and F<t/copy.t> skip completely.
+Meanwhile F<t/void.t> enables some cute workaround, that would provide
 all needed C<apt-config(1)> functionality without that executable itself.
 (Just in case on that platform there will be Debian some day.)
 But we still stay within POSIX world -- no future outside.
@@ -182,15 +194,15 @@ But we still stay within POSIX world -- no future outside.
 
 =item pure distribution
 
-# TODO: http://search.cpan.org/dist/File-AptFetch/
+L<http://search.cpan.org/dist/File-AptFetch/>
 
 =item and debianization stuff too
 
-# TODO: think sharesource
+# TODO
 
 =item subversion (root)
 
-http://svn.sharesource.org/svn/file_apt_fetch
+# TODO
 
 =back
 
@@ -200,11 +212,11 @@ http://svn.sharesource.org/svn/file_apt_fetch
 
 =item please report here
 
-# TODO: http://rt.cpan.org/Public/Dist/Display.html?Name=File-AptFetch
+L<http://rt.cpan.org/Public/Dist/Display.html?Name=File-AptFetch/>
 
 =item please don't report there
 
-# TODO: think sharesource
+# TODO
 
 =back
 
@@ -223,6 +235,6 @@ AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
 =item *
 
 GNU Lesser General Public License v3
-E<lt>L<http:E<sol>E<sol>www.gnu.orgZ<>E<sol>licensesZ<>E<sol>lgpl.txt>E<gt>
+L<http://www.gnu.org/licenses/lgpl.txt>
 
 =back

@@ -1,4 +1,17 @@
+  v0.0.8 pending
+      Panic release -- methods have no will to report any progress.
+
+      *   *$ConfigData{timeout}* has been invented.  Default timeout was
+          bumped 12x times in order to recover from too silent
+          APT-methods.
+
+      *   Hopefully fixing part of FAILs of cpan-testers.
+
+  v0.0.7 20090511
+
+      *   First release.
+
   v0.0.0 20090222
 
-          # TODO:
+      *   Initialization.
 

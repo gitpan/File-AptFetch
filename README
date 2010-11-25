@@ -62,6 +62,10 @@
       Required.  Names a signal that will be sent to method.  "DESTROY"
       in File::AptFetch has more.
 
+: ``timeout''
+      (*v.0.0.8*) Required.  I've believed, that could stay hardcoded. 
+      I was wrong.  "_read" in File::AptFetch has more.
+
 
 ==== TEST-SUITE ====
 
@@ -91,23 +95,22 @@
 ==== AVAILABILITY ====
 
 : pure distribution
-      # TODO: http://search.cpan.org/dist/File-AptFetch/
+      <http://search.cpan.org/dist/File-AptFetch/>
 
 : and debianization stuff too
-      # TODO: think sharesource
+      # TODO
 
 : subversion (root)
-      http://svn.sharesource.org/svn/file_apt_fetch
+      # TODO
 
 
 ==== BUGS ====
 
 : please report here
-      # TODO:
-      http://rt.cpan.org/Public/Dist/Display.html?Name=File-AptFetch
+      <http://rt.cpan.org/Public/Dist/Display.html?Name=File-AptFetch/>
 
 : please don't report there
-      # TODO: think sharesource
+      # TODO
 
 
 ==== COPYRIGHT AND LICENSING ====

@@ -2,7 +2,8 @@ Build.PL
 Changes
 lib/File/AptFetch.pm
 lib/File/AptFetch/Cookbook.pod
-MANIFEST
+MANIFEST			This list of files
+META.yml
 README
 t/copy.t
 t/DB.pm
@@ -13,5 +14,4 @@ t/w-method
 t/x-method
 t/y-method
 t/z-method
-META.yml
 SIGNATURE    Added here by Module::Build

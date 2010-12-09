@@ -1,6 +1,6 @@
 =pod
 
-=for comment $Id: Cookbook.pod 354 2009-05-09 22:15:56Z whynot $
+=for comment $Id: Cookbook.pod 431 2010-12-05 01:07:42Z whynot $
 
 =for comment $VERSION = qv q|0.0.3|;
 
@@ -151,7 +151,7 @@ To fix this I need to do some work -- it's undone yet.
 As you can see, there's no message what would require status.
 It's up to the method to report any progress.
 (I<v.0.0.8>)
-Alas, they doesn't.
+Alas, they don't.
 Thus, that's up to application to count any progress.
 Me wonders if they timeout at all.
 However, there're signs that those of networking type properly detect if
@@ -402,7 +402,18 @@ Beware.
 
 It does B<not> reget!
 If a source and a target match, then it will silently truncate the source.
-Then happily return size and hashes of now gone file
+Then happily return size and hashes of now gone file.
+(That's for pre-Squeeze's APT.)
+
+=item *
+
+(I<v0.0.9>)
+It does B<not> reget!
+However, the Squeeze's B<copy> B<unlinks> the target now.
+Thus it needs write permissions in the targt directory.
+The permissions of just created target are affected by umask.
+And, as you already guessed, I<$message{version}> is C<1.0> still.
+(OMG, THAT'S RACE!)
 
 =item *
 

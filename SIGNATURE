@@ -1,5 +1,5 @@
 This file contains message digests of all files listed in MANIFEST,
-signed via the Module::Signature module, version 0.55.
+signed via the Module::Signature module, version 0.63.
 
 To verify the content in this distribution, first make sure you have
 Module::Signature installed, then type:
@@ -14,26 +14,26 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 9d20964612061d3c6a3d2f935f81efae4e0234ce Build.PL
-SHA1 dd46279b468a1a0a2f09131c654d2f2566efcdfb Changes
-SHA1 c118d4ac3c2822a27b95d56b2e4855f99b60c761 MANIFEST
-SHA1 5007571fdcf09939b882292dbf9e5e033124d9b9 META.yml
-SHA1 04795e2d199cce0459925d155ad3e09d44fb2a50 README
-SHA1 b3f71ec7e6b408cd7e31d3cbc9402b556b13e557 lib/File/AptFetch.pm
-SHA1 d57c34b4dc7d01e5c280ca88f2ffca1149c65f00 lib/File/AptFetch/Cookbook.pod
+SHA1 adfa58a524de36981161cdac8d0b24e4d002ff71 Build.PL
+SHA1 9abb43784a8db915d6ffcb58935d5a7795fec118 File-AptFetch-v0.0.9.tar.gz
+SHA1 6ce6f273e1dfee677c28b915796ce4bbd6b451b8 MANIFEST
+SHA1 85fa77d988f96969f7c554efa0b03fc97bb6e2b4 META.yml
+SHA1 7c6b0e87762de5c85daae1835e358504925f9635 lib/File/AptFetch.pm
+SHA1 d5d1ea4235690e2237597915698d421e7cac8257 lib/File/AptFetch/Cookbook.pod
+SHA1 e140a01700211e1ff7e4e1dd35aee892dd52baa9 t/0.t
 SHA1 aa1fc7e5b2c7bd780a3cd01181dec6623c40b21c t/DB.pm
 SHA1 836a64afe6320c05211854db4fa15bf0263a2f2d t/TestSuite.pm
-SHA1 60ae0afb60c59a5b3e3ec91f386815fa4fc3f620 t/copy.t
-SHA1 42db7e8dcd0dfa7a536861b9f8cc8ebe221ff5ea t/file.t
-SHA1 b869b3306faf16cff75959b16b3aca852cbc62d6 t/void.t
-SHA1 7ca703ed49bc5f9204aa6b6d9474c7eb626d6dc1 t/w-method
-SHA1 2b2665c1ec669726f06a91a81fe366fdcb3858b4 t/x-method
-SHA1 503dfffd60733005587aace17bad5c45db668792 t/y-method
-SHA1 3a5bd33a454f9f6a1b2ae3a114bb000fc9bae895 t/z-method
+SHA1 39970c21bb5193539ef639b4c2c83d52fa1af765 t/copy.t
+SHA1 218fd14ad7bd78ade0c95afd7f911090a3015a0c t/file.t
+SHA1 b07af45110c7967ec57bb85563f65f25ab60e8c6 t/void.t
+SHA1 7a40148f0762230a8defbac996271faa0ac2cd0e t/w-method
+SHA1 ebe8ce7e08cd17419a018af21c88ad3164e679a2 t/x-method
+SHA1 7f1773e91e0feff654943e6725458ba2d1a99e67 t/y-method
+SHA1 b28cab2552d5e2215e5ef596eb69a0e1f365f8cb t/z-method
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.9 (GNU/Linux)
 
-iD8DBQFM7YxG1qsM9O+FbKQRAobNAKDkysVu7IGIBUUuF55vXe23bf737wCdF7iY
-/YMENKbbN9R3mU1ANP1qwqo=
-=grWN
+iD8DBQFM+69r1qsM9O+FbKQRAt6fAJ9d2FwAdk4qCAUxpWUVHkExmnsT8gCfXrAz
+fPh99463MBCth1p/kXgA8EI=
+=3idP
 -----END PGP SIGNATURE-----

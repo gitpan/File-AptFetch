@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Build.PL 417 2010-11-13 13:05:22Z whynot $
+# $Id: Build.PL 431 2010-12-05 01:07:42Z whynot $
 
 use strict;
 use warnings;
@@ -56,14 +56,16 @@ B<(bug)> My knowledge of APT methods is very irregular, so is B<F::AF::C>.
 
 =item B<Perl>
 
-S<B<v. 5.6>> or later.
-There're some B<our>es spelled around.
+B<v.5.8.0> or later.
+Look, B<v.5.6.2> is C<woody>.
+Eight years ago.
+You must be kidding.
 
 =item B<IO::Pipe>
 
 Any version.
-It's distributed with Perl itself, however,
-I didn't elaborate to verify since what version.
+It's distributed with Perl itself.
+In core since B<v.5.3.7>, predates debian, BTW.
 
 =back
 
@@ -81,24 +83,22 @@ Should be distributed with Perl itself too.
 =cut
 
 my $builder = Module::Build->new(
-  module_name       => q|File::AptFetch|,
-  license           => q|lgpl|,
-  dist_author       => q|Eric Pozharski <whynot@cpan.org>|,
-  dist_version_from => q|lib/File/AptFetch.pm|,
-  sign              => 1,
-  requires          => {
-    perl        => qv(q|5.6|),
-    q|IO::Pipe| => '', },
-  build_requires    => {
-    q|Test::More| => '', },
-  PL_files          => {
-    ( -f q|README.PL|  ? ( q|README.PL|  => q|README|  ) : ()),
-    ( -f q|Changes.PL| ? ( q|Changes.PL| => q|Changes| ) : ()), },
-  add_to_cleanup    => [ qw|
-    *.tmp *.bak foo.*
-    FAF_*_?????? |,
-    ( -f q|README.PL|  ? q|README|  : ()),
-    ( -f q|Changes.PL| ? q|Changes| : ()), ],);
+  module_name       =>                         q|File::AptFetch|,
+  license           =>                                   q|lgpl|,
+  dist_author       =>       q|Eric Pozharski <whynot@cpan.org>|,
+  dist_version_from =>                   q|lib/File/AptFetch.pm|,
+  sign              =>                                         1,
+  requires          =>
+  { perl        => qv( q|5.8.0| ),
+    q|IO::Pipe| =>             ''                              },
+  build_requires    => { q|Test::More| =>                   '' },
+  PL_files          =>
+ {( -f q|README.PL|  ? ( q|README.PL|  => q|README|  ) : ( )),
+  ( -f q|Changes.PL| ? ( q|Changes.PL| => q|Changes| ) : ( )) },
+  add_to_cleanup    =>
+[qw| *.tmp *.bak foo.* FAF_*_?????? |,
+  ( -f q|README.PL|  ? q|README|  : ( )),
+  ( -f q|Changes.PL| ? q|Changes| : ( ))                      ]);
 
 =head1 BUILD-TIME CONFIGURATION
 
@@ -118,7 +118,7 @@ L<File::AptFetch/_uncache_configuration> have more.
 
 =cut
 
-$builder->config_data(config_source => [ qw| /usr/bin/apt-config dump | ]);
+$builder->config_data( config_source => [ qw| /usr/bin/apt-config dump | ]);
 
 =item C<config_source>
 
@@ -128,7 +128,7 @@ L<File::AptFetch/_cache_configuration> has more.
 
 =cut
 
-$builder->config_data(signal        => q|TERM|);
+$builder->config_data( signal => q|TERM| );
 
 =item C<signal>
 
@@ -152,7 +152,7 @@ L<File::AptFetch/_read> has more.
 
 =cut
 
-$builder->create_build_script();
+$builder->create_build_script( );
 
 =head1 TEST-SUITE
 

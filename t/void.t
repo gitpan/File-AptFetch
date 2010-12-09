@@ -1,11 +1,11 @@
 #!/usr/bin/perl
-# $Id: void.t 354 2009-05-09 22:15:56Z whynot $
+# $Id: void.t 431 2010-12-05 01:07:42Z whynot $
 
 use strict;
 use warnings;
 
 package main;
-use version 0.50; our $VERSION = qv q|0.0.9|;
+use version 0.50; our $VERSION = qv q|0.0.10|;
 
 use t::TestSuite qw|
   FAF_wrap_stderr FAF_unwrap_stderr FAF_safe_wrapper
@@ -46,7 +46,7 @@ $units{handshake} = sub {
     $fn[5] = File::AptFetch->init;
     like
       $fn[5],
-      qr{^I<method> is unspecified$}sm,
+      qr{^\(\$method\) is unspecified$}sm,
       q|F::AF->init fails with empty CL|;
 
     File::AptFetch::ConfigData->set_config(lib_method => q|/dev/null|);
@@ -55,7 +55,7 @@ $units{handshake} = sub {
     $fn[6] = FAF_unwrap_stderr $fn[2];
     like
       $fn[5],
-      qr{^C<void>: \(\d+\): died without handshake}sm,
+      qr{^\Q(void): (\E\d+\): died without handshake}sm,
       q|F::AF->init fails with broken I<lib_method>|;
 
     File::AptFetch::ConfigData->set_config(lib_method => $fn[0]);
@@ -64,7 +64,7 @@ $units{handshake} = sub {
     $fn[6] = FAF_unwrap_stderr $fn[2];
     like
       $fn[5],
-      qr{^C<void>: \(\d+\): died without handshake}sm,
+      qr{^\Q(void): (\E\d+\): died without handshake}sm,
       q|F::AF->init fails with empty I<lib_method>|;
 
     $fn[4] = (split
@@ -74,7 +74,7 @@ $units{handshake} = sub {
     $fn[6] = FAF_unwrap_stderr $fn[2];
     like
       $fn[5],
-      qr{^C<\Q$fn[4]\E>: \(\d+\): died without handshake}sm,
+      qr{^\Q($fn[4]): (\E\d+\): died without handshake}sm,
       q|F::AF->init fails with unexecutable method|;
 
     $fn[4] = ( tempfile q|void_handshake_XXXXXX|, DIR => $fn[0] )[1];
@@ -85,7 +85,7 @@ $units{handshake} = sub {
     $fn[6] = FAF_unwrap_stderr $fn[2];
     like
       $fn[5],
-      qr{^C<\Q$fn[4]\E>: timeouted without handshake}sm,
+      qr{^\Q($fn[4]): timeouted without handshake}sm,
       q|F::AF->init fails with empty executable|;
 
     @fn[3,4] = tempfile q|void_handshake_XXXXXX|, DIR => $fn[0];
@@ -97,7 +97,7 @@ $units{handshake} = sub {
     $fn[6] = FAF_unwrap_stderr $fn[2];
     like
       $fn[5],
-      qr{C<\Q$fn[4]\E>: timeouted without handshake}sm,
+      qr{^\Q($fn[4]): timeouted without handshake}sm,
       q|F::AF->init fails with bogus executable|;
 
     File::AptFetch::_uncache_configuration;
@@ -134,7 +134,7 @@ $units{aptconfig} = sub {
     $fn[5] = FAF_unwrap_stderr $fn[3];
     like
       $fn[4],
-      qr{^C<void>: \(C<apt-config>\) died: \d+}sm,
+      qr{^\Q(void): (apt-config) died: \E\d+}sm,
       q|F::AF->init fails with broken I<config_source>|;
 
     @fn[6,7] = tempfile q|void_aptconfig_XXXXXX|, DIR => $fn[0];
@@ -146,7 +146,7 @@ $units{aptconfig} = sub {
     $fn[5] = FAF_unwrap_stderr $fn[3];
     like
       $fn[4],
-      qr{^C<void>: \(C<apt-config>\): failed to output anything}sm,
+      qr{^\Q(void): (apt-config): failed to output anything}sm,
       q|F::AF->init fails with empty I<config_source>|;
 
     @fn[6,7] = tempfile q|void_aptconfig_XXXXXX|, DIR => $fn[0];
@@ -156,10 +156,14 @@ $units{aptconfig} = sub {
     FAF_wrap_stderr $fn[3];
     $fn[4] = FAF_safe_wrapper \&File::AptFetch::init, q||, q|void|;
     $fn[5] = FAF_unwrap_stderr $fn[3];
+    SKIP: {
+        skip q|unable to test due local restrictions(?)|, 1 if $fn[4] =~
+        qr{interrupted system call}i;
     like
       $fn[4],
-      qr{^C<void>: \(C<apt-config>\): timeouted}sm,
+      qr{^\Q(void): (apt-config): timeouted}sm,
       q|F::AF->init fails with slow I<config_source>|;
+    }
 
     File::AptFetch::ConfigData->set_config(lib_method => undef);
 
@@ -183,7 +187,7 @@ $units{aptconfig} = sub {
         $fn[5] = FAF_unwrap_stderr $fn[3];
         like
           $fn[4],
-          qr{^C<void>: \(\Q$sample\E\): that's unparsable}sm,
+          qr{^\Q(void): ($sample): that's unparsable}sm,
           qq|F::AF->init fails with broken entry ($sample)|; };
 
 # FIXME: Unorthogonal.
@@ -203,7 +207,7 @@ $units{aptconfig} = sub {
     $fn[5] = FAF_unwrap_stderr $fn[3];
     like
       $fn[4],
-      qr{^C<void>: \(I<lib_method>\): neither preset nor found}sm,
+      qr{^\(void\): \(\$lib_method\): neither preset nor found}sm,
       q|F::AF->init fails with missing I<lib_method>|;
 
     File::AptFetch::ConfigData->set_config(lib_method => $fn[2]);
@@ -262,7 +266,7 @@ $units{configure} = sub {
         $fn[6] = FAF_unwrap_stderr $fn[2];
         like
           $fn[5],
-          qr{^C<\Q$fn[4]\E>: \(\Q$sample->[0]\E\): that's not a Status Code$},
+          qr{^\Q($fn[4]): ($sample->[0]): that's not a Status Code\E$},
           qq|F::AF->init fails at broken greeting ($sample->[0])|; };
 
     foreach my $sample (
@@ -286,7 +290,7 @@ $units{configure} = sub {
         $fn[6] = FAF_unwrap_stderr $fn[2];
         like
           $fn[5],
-          qr{^C<\Q$fn[4]\E>: \(\Q$sample->[1]\E\): that's not a Message$},
+          qr{^\Q($fn[4]): ($sample->[1]): that's not a Message\E$},
           qq|F::AF->init fails at broken message ($sample->[1])|; };
 
     File::AptFetch::ConfigData->set_config(source_config => $fn[7])

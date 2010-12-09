@@ -1,20 +1,21 @@
 #!/usr/bin/perl
-# $Id: w-method 350 2009-04-11 18:21:15Z whynot $
+# $Id: w-method 431 2010-12-05 01:07:42Z whynot $
 
 use strict;
 use warnings;
 
 package main;
-our $VERSION = q|0.0.2|;
+our $VERSION = q|0.0.3|;
 
 use IO::Handle;
-
-STDOUT->autoflush(1);
 
 my $fn = <DATA>;
 chomp $fn;
 open STDERR, q|>|, $fn or
   die qq|open (STDERR) failed: $!|;
+
+STDOUT->autoflush(1);
+STDERR->autoflush( 1 );
 
 $SIG{$_} = sub { my $sig = shift @_; warn qq|{{{$sig}}}\n|; exit 0; }
   foreach grep -1 == index($_, '_'), keys %SIG;

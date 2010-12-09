@@ -1,11 +1,11 @@
 #!/usr/bin/perl
-# $Id: file.t 354 2009-05-09 22:15:56Z whynot $
+# $Id: file.t 431 2010-12-05 01:07:42Z whynot $
 
 use strict;
 use warnings;
 
 package main;
-use version 0.50; our $VERSION = qv q|0.0.7|;
+use version 0.50; our $VERSION = qv q|0.0.8|;
 
 use t::TestSuite qw|
   FAF_wrap_stderr FAF_unwrap_stderr FAF_fetch_stderr
@@ -99,7 +99,7 @@ $units{one} = sub {
       { rc      => $fn[5],
         status  => $fn[1]{Status},
         md5hash => $fn[1]{message}{q|md5-hash|}, },
-      { rc => q|C<file>: timeouted without responce|,
+      { rc => q|(file): timeouted without responce|,
         status  => 201,
         md5hash => q|5eb986e6affbe6f32f88638e7e3af63d|, },
       q|then timeouts|;
@@ -275,7 +275,7 @@ $units{two} = sub {
       { rc      => $fn[5],
         status  => $fn[1]{Status},
         md5hash => $fn[1]{message}{q|md5-hash|}, },
-      { rc      => q|C<file>: timeouted without responce|,
+      { rc      => q|(file): timeouted without responce|,
         status  => 201,
         md5hash => $fn[7], },
       q|then timeouts|;

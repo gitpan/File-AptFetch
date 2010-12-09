@@ -1,11 +1,11 @@
 #!/usr/bin/perl
-# $Id: copy.t 354 2009-05-09 22:15:56Z whynot $
+# $Id: copy.t 431 2010-12-05 01:07:42Z whynot $
 
 use strict;
 use warnings;
 
 package main;
-use version 0.50; our $VERSION = qv q|0.0.6|;
+use version 0.50; our $VERSION = qv q|0.0.7|;
 
 use t::TestSuite qw|
   FAF_wrap_stderr FAF_unwrap_stderr FAF_fetch_stderr
@@ -32,7 +32,7 @@ plan
     (skip_all => q|not Debian, or alike|)       :
   !-x qq|$fn[0]/copy|                           ?
     (skip_all => q|missing method (copy)|)      :
-    (tests    => 85);
+    (tests    => 89);
 undef @fn;
 
 $units{void} = sub {
@@ -440,18 +440,21 @@ $units{fail} = sub {
         log      => $fn[2]{log},
         filename => $fn[2]{message}{filename},
         uri      => $fn[2]{message}{uri},
-        md5hash  => $fn[2]{message}{q|md5-hash|},
         size     => $fn[2]{message}{size}, },
       { rc       => '',
         status   => 201,
         log      => [ ],
         filename => $fn[7],
         uri      => qq|copy:$fn[7]|,
-        md5hash  => $Copy_Has_Md5hash && $t::TestSuite::Empty_MD5,
         size     => $fn[9]{size}, },
       q|B<&gain> succeedes again|;
     ok -f $fn[7], q|requested file is here|;
-    ok !-s $fn[7], q|have no size|;
+    TODO: {
+        local $TODO = q|running modern APT|;
+        is -s $fn[7], $fn[9]{size}, q|indeed|;
+        is $fn[2]{message}{q|md5-hash|}, $fn[9]{q|md5-hash|},
+          q|C<copy:> doesn't overwrite|
+    }
     is
       $fn[2]{message}{q|last-modified|},
       $fn[9]{q|last-modified|},
@@ -619,7 +622,10 @@ $units{perm} = sub {
     $fn[1] = tempdir q|FAF_copy_fail_XXXXXX|;
     $fn[5] = ( tempfile q|copy-perm_XXXXXX|, DIR => $fn[0] )[1];
     FAF_wrap_stderr $fn[5];
+    $fn[12] = umask;
+    umask 0072;
     $fn[2] = FAF_safe_wrapper \&File::AptFetch::init, q||, q|copy|;
+    umask $fn[12];
     $fn[3] = FAF_safe_wrapper \&File::AptFetch::init, q||, q|file|;
     $fn[11] = FAF_unwrap_stderr $fn[5];
     ok !$fn[11], q|I<STDERR> is empty|;
@@ -684,8 +690,11 @@ $units{perm} = sub {
       +(stat $fn[8])[2],
       (stat $fn[7])[2],
       q|source's permissions aren't passed|;
+    TODO: {
+        local $TODO = q|running modern APT|;
     is
-      +(stat $fn[8])[2] & 0777, 0777, q|target's permissions are kept though|;
+      +(stat $fn[8])[2] & 0777, 0604, q|target's permissions are affected by umask|;
+    }
 
     @fn[6,7] = tempfile q|copy_fail_XXXXXX|, DIR => $fn[0];
     print { $fn[6] } q|copy perm bravo|;
@@ -722,7 +731,13 @@ $units{perm} = sub {
         log    => [ ],
         uri    => qq|copy:$fn[7]|, },
       q|B<&gain> fails then|;
-    ok !-f $fn[8], q|target isn't created|;
+    TODO: {
+        local $TODO = q|running modern APT|;
+        like $fn[2]{message}{message}, qr{\bpermission}i,
+          q|message is enough|;
+    ok -f $fn[8], q|target is created|;
+        is -s _, 0, q|and no size|;
+    }
 
     @fn[6,7] = tempfile q|copy_fail_XXXXXX|, DIR => $fn[0];
     print { $fn[6] } q|copy perm charlie|;
@@ -748,18 +763,21 @@ $units{perm} = sub {
       q|B<&request> succeedes to overwrite unwritable file|;
     $fn[4] = FAF_wait_and_gain $fn[2];
     FAF_show_message %{$fn[2]->{message}};
+    TODO: {
+        local $TODO = q|running modern APT|;
     is_deeply
       { rc     => $fn[4],
         status => $fn[2]{Status},
         log    => $fn[2]{log},
         uri    => $fn[2]{message}{uri}, },
       { rc     => '',
-        status => 400,
+        status => 201,
         log    => [ ],
         uri    => qq|copy:$fn[7]|, },
       q|B<&gain> fails then|;
-    ok $fn[2]{message}{message}, q|and I<$message{Message}> is set|;
-    ok !((stat $fn[8])[2] & 0777), q|and permissions are kept|;
+    ok !$fn[2]{message}{message}, q|and I<$message{Message}> is unset|;
+    is +((stat $fn[8])[2] & 0777), 0604, q|and permissions are overriden|;
+    }
 
     @fn[6,7] = tempfile q|copy_fail_XXXXXX|, DIR => $fn[0];
     print { $fn[6] } q|copy perm delta|;
@@ -869,22 +887,21 @@ $units{perm} = sub {
     $fn[4] = FAF_wait_and_gain $fn[2];
     FAF_show_message %{$fn[2]->{message}};
     chmod 0755, $fn[1];
+    TODO: {
+        local $TODO = q|running modern APT|;
     is_deeply
       { rc       => $fn[4],
         status   => $fn[2]{Status},
         log      => $fn[2]{log},
-        filename => $fn[2]{message}{filename},
-        uri      => $fn[2]{message}{uri},
-        md5hash  => $fn[2]{message}{q|md5-hash|},
-        size     => $fn[2]{message}{size}, },
+        uri      => $fn[2]{message}{uri}, },
       { rc       => '',
-        status   => 201,
+        status   => 400,
         log      => [ ],
-        filename => $fn[8],
-        uri      => qq|copy:$fn[7]|,
-        md5hash  => $Copy_Has_Md5hash && $fn[3]{message}{q|md5-hash|},
-        size     => $fn[3]{message}{size}, },
-      q|B<&gain> succeedes though|;
+        uri      => qq|copy:$fn[7]|, },
+      q|B<&gain> fails then|;
+        like $fn[2]{message}{message}, qr{\bpermission}i,
+          q|message is enough|;
+    }
 
     @fn[6,7] = tempfile q|copy_fail_XXXXXX|, DIR => $fn[0];
     print { $fn[6] } q|copy perm gala|;

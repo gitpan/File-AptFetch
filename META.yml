@@ -1,6 +1,6 @@
 ---
 name: File-AptFetch
-version: v0.0.8
+version: v0.0.9
 author:
   - 'Eric Pozharski <whynot@cpan.org>'
 abstract: perl interface onto APT-Methods.
@@ -11,13 +11,13 @@ build_requires:
   Test::More: ''
 requires:
   IO::Pipe: ''
-  perl: v5.6.0
+  perl: v5.8.0
 configure_requires:
   Module::Build: 0.340201
 provides:
   File::AptFetch:
     file: lib/File/AptFetch.pm
-    version: v0.0.8
+    version: v0.0.9
 generated_by: Module::Build version 0.340201
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html

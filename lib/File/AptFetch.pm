@@ -1,4 +1,4 @@
-# $Id: AptFetch.pm 353 2009-05-04 11:02:26Z whynot $
+# $Id: AptFetch.pm 431 2010-12-05 01:07:42Z whynot $
 # Copyright 2009, 2010 Eric Pozharski <whynot@pozharski.name>
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
 # GNU LGPLv3
@@ -7,7 +7,7 @@ use warnings;
 use strict;
 
 package File::AptFetch;
-use version 0.50; our $VERSION = qv q|0.0.8|;
+use version 0.50; our $VERSION = qv q|0.0.9|;
 
 use File::AptFetch::ConfigData;
 use IO::Pipe;
@@ -238,7 +238,7 @@ I<$method> is saved in same named key for reuse.
 
 =over
 
-=item CZ<>E<lt>$methodZ<>E<gt>: (IZ<>E<lt>lib_methodZ<>E<gt>): neither preset nor found
+=item ($method): (lib_method): neither preset nor found
 
 I<$lib_method> (in B<File::AptFetch::ConfigData>) points to a directory where
 APT-Methods reside.
@@ -247,24 +247,24 @@ It's either picked from configuration (build-time) or from B<apt-config> output
 (run-time) (in that order).
 It wasn't found in either place -- fairly strange APT you have.
 
-=item IZ<>E<lt>methodZ<>E<gt> is unspecified
+=item (method) is unspecified
 
 I<$method> is required argument,
 so, please, provide.
 
-=item CZ<>E<lt>$methodZ<>E<gt>: ($?): died without handshake
+=item ($method): ($?): died without handshake
 
 Start-up configuration is essential.
 If I<$method> disconnects early, than that makes a problem.
 The exit code (no postprocessing at all) is provided in braces.
 
-=item CZ<>E<lt>$methodZ<>E<gt>: timeouted without handshake
+=item ($method): timeouted without handshake
 
 I<$method> failed to configure within time frame provided.
 (I<v.0.0.8>)
 L</_read> has more about timeouts.
 
-=item CZ<>E<lt>$methodZ<>E<gt>: ($Status): that's supposed to be (100) (Capabilities)
+=item ($method): ($Status): that's supposed to be (100 Capabilities)
 
 As described in "APT Method Interface", Section 2.2, I<$method> starts with
 S<C<'100 Capabilities'>> Status Code.
@@ -285,14 +285,14 @@ my @apt_config;
 sub init        {
     my $cls = shift @_;
     my $self = { };
-    $self->{method} = shift @_          or return q|I<method> is unspecified|;
+    $self->{method} = shift @_          or return q|($method) is unspecified|;
     $self->{log} = [ ];
     $self->{timeout} = File::AptFetch::ConfigData->config( q|timeout| );
     bless $self, $cls;
     my $rc;
     $rc = $self->_cache_configuration                          and return $rc;
     File::AptFetch::ConfigData->config( q|lib_method| )              or return
-      qq|C<$self->{method}>: (I<lib_method>): neither preset nor found|;
+      qq|($self->{method}): (\$lib_method): neither preset nor found|;
     $self->{it} = IO::Pipe->new;
     $self->{me} = IO::Pipe->new;
 
@@ -327,14 +327,14 @@ sub init        {
 
     $rc = $self->_read;
     $self->{CHLD_error}                                             and return
-      qq|C<$self->{method}>: ($self->{CHLD_error}): died without handshake|;
+      qq|($self->{method}): ($self->{CHLD_error}): died without handshake|;
     @{$self->{log}} && !$self->{log}[-1]                             or return
-      qq|C<$self->{method}>: timeouted without handshake|;
+      qq|($self->{method}): timeouted without handshake|;
 
     $rc = $self->_parse_status_code                            and return $rc;
     $self->{Status} == 100                                           or return
-      qq|C<$self->{method}>: ($self->{Status}): | .
-      q|that's supposed to be (100) (Capabilities)|;
+      qq|($self->{method}): ($self->{Status}): | .
+      q|that's supposed to be (100 Capabilities)|;
     $rc = $self->_parse_message                                and return $rc;
 
     return $self }
@@ -426,7 +426,7 @@ Diagnostic provided:
 
 =over
 
-=item CZ<>E<lt>$methodZ<>E<gt>: ($filename): URI is undefined
+=item ($method): ($filename): URI is undefined
 
 Either I<$source> or I<$source{uri}> was evaluated to FALSE.
 (What request is supposed to be?)
@@ -442,25 +442,23 @@ the request would happen only in case I<@_> has been parsed successfully.
 
 =cut
 
-sub request   {
+sub request  {
     my $self = shift @_;
-    my %request = ( @_ );
+    my %request = @_;
     my $log;
-    while(my($filename, $source) = each %request) {
+    while( my( $filename, $source ) = each %request ) {
         my $uri = ref $source ? $source->{uri} : $source;
-        $uri or return
-          qq|C<$self->{method}>: ($filename): URI is undefined|;
+        $uri   or return qq|($self->{method}): ($filename): URI is undefined|;
         $self->{trace}{$filename} = '';
-        $log .= <<"END_OF_LOG";
+        $log .= <<"END_OF_LOG"                         }
 600 URI Acquire
 URI: $self->{method}:$uri
 Filename: $filename
 
 END_OF_LOG
-                                                   };
-    $self->{it}->print($log);
-    push @{$self->{diag}}, split(qr{\n}m, $log), q||;
-    return ''; };
+    $self->{it}->print( $log );
+    push @{$self->{diag}}, split( qr{\n}m, $log ), q||;
+    return '' }
 
 =item B<gain>
 
@@ -477,18 +475,18 @@ Diagnostic provided:
 
 =over
 
-=item CZ<>E<lt>$methodZ<>E<gt>: ($CHLD_error): died
+=item ($method): ($CHLD_error): died
 
 Something gone wrong, the APT's method has died;
 More diagnostic might gone onto I<STDERR>.
 
-=item CZ<>E<lt>$methodZ<>E<gt>: timeouted without responce
+=item ($method): timeouted without responce
 
 The APT's method has quit without properly terminating message with empty line
 or failed to output anything at all.
 Supposedly, shouldn't happen.
 
-=item CZ<>E<lt>$methodZ<>E<gt>: timeouted
+=item ($method): timeouted
 
 The APT's method has sat silently all the time.
 The possible cause would be you've run out of requests
@@ -501,18 +499,17 @@ L</_parse_status_code> and L</_parse_message> can emit their own messages.
 
 =cut
 
-sub gain                                                      {
+sub gain                                                     {
     my $self = shift @_;
 
     $self->_read;
-    return qq|C<$self->{method}>: ($self->{CHLD_error}): died|
-      if $self->{CHLD_error};
-    return qq|C<$self->{method}>: timeouted without responce|
-      unless @{$self->{log}} && !$self->{log}[-1];
-    return qq|C<$self->{method}>: timeouted|
-      if $self->{ALRM_error};
+    $self->{CHLD_error}                                             and return
+      qq|($self->{method}): ($self->{CHLD_error}): died|;
+    @{$self->{log}} && !$self->{log}[-1]                             or return
+      qq|($self->{method}): timeouted without responce|;
+    $self->{ALRM_error}           and return qq|($self->{method}): timeouted|;
 
-    return $self->_parse_status_code || $self->_parse_message; };
+    return $self->_parse_status_code || $self->_parse_message }
 
 =item B<_parse_status_code>
 
@@ -525,7 +522,7 @@ Consequent items are unaffected.
 
 =over
 
-=item CZ<>E<lt>$methodZ<>E<gt>: ($log_item): that's not a Status Code
+=item ($method): ($log_item): that's not a Status Code
 
 The $log_item must be C<qrZ<>E<sol>^\d{3}\s+.+E<sol>>.
 No luck this time.
@@ -540,13 +537,11 @@ then backups the processed item.
 
 sub _parse_status_code {
     my $self = shift @_;
-    $self->{log}[0] =~ m|^(\d{3})\s+(.+)| or
-      return
-        qq|C<$self->{method}>: ($self->{log}[0]): that's not a Status Code|;
-    $self->{Status} = $1;
-    $self->{status} = $2;
+    $self->{log}[0] =~ m|^(\d{3})\s+(.+)|                            or return
+      qq|($self->{method}): ($self->{log}[0]): that's not a Status Code|;
+    @$self{qw| Status status |} = ( $1, $2 );
     push @{$self->{diag}}, shift @{$self->{log}};
-    return;             };
+    return              }
 
 =item B<_parse_message>
 
@@ -566,7 +561,7 @@ In next release hyphens (C<'-'>) will be substituted with underscore (C<'_'>).
 
 =over
 
-=item CZ<>E<lt>$methodZ<>E<gt>: ($log_item): that's not a Message
+=item ($method): ($log_item): that's not a Message
 
 The I<$log_item> must be C<qrZ<>E<sol>^[0-9a-z-]+:(?E<gt>\s+).+E<sol>i>.
 It's not.
@@ -586,19 +581,17 @@ Beware and prevent before going for parsing.
 sub _parse_message {
     my $self = shift @_;
     my %cache;
-    while(@{$self->{log}})         {
-        $self->{log}[0] =~ m|^([0-9a-z-]+):(?>\s+)(.+)|i or
-          return
-            qq|C<$self->{method}>: ($self->{log}[0]): that's not a Message|;
+    while( @{$self->{log}} )       {
+        $self->{log}[0] =~ m{^([0-9a-z-]+):(?>\s+)(.+)}i             or return
+          qq|($self->{method}): ($self->{log}[0]): that's not a Message|;
         $cache{lc $1} = $2;
         push @{$self->{diag}}, shift @{$self->{log}};
 # XXX: Should check for empty line but falsehood.
-        unless($self->{log}[0]) {
+        unless( $self->{log}[0] ) {
             push @{$self->{diag}}, shift @{$self->{log}};
-            last;                }; };
-    $self->{$self->{Status} == 100 ? q|capabilities| : q|message|} =
-      \%cache;
-    return '';      };
+            last;                  }}
+    $self->{$self->{Status} == 100 ? q|capabilities| : q|message|} = \%cache;
+    return ''       }
 
 =item B<_cache_configuration>
 
@@ -639,29 +632,29 @@ Diagnostic provided:
 
 =over
 
-=item CZ<>E<lt>$methodZ<>E<gt>: ($line): that's unparsable
+=item ($method): ($line): that's unparsable
 
-The I<$line> must be C<qrZ<>E<sol>^[a-z-]+(?:::[a-z-]+)*(?:::)*\s+".*";$E<sol>i>.
+The I<$line> must be C<qrZ<>E<sol>^[a-z-]+(?:::[a-z_-]+)*(?:::)*\s+".*";$E<sol>i>.
 I<$line> doesn't match.
 Please note B<caveat> below.
 
-=item CZ<>E<lt>$methodZ<>E<gt>: close (CZ<>E<lt>apt-configZ<>E<gt>) failed: $!
+=item ($method): close (apt-config) failed: $!
 
 After processing input a pipe is B<close>d.
 That B<close> failed with I<$!>.
 
-=item CZ<>E<lt>$methodZ<>E<gt>: (CZ<>E<lt>apt-configZ<>E<gt>): timeouted
+=item ($method): (apt-config): timeouted
 
 While processing a fair 120sec timeout is given
 (it's reset after each I<$line>).
 I<@$config_source> hanged for that time.
 
-=item CZ<>E<lt>$methodZ<>E<gt>: (CZ<>E<lt>apt-configZ<>E<gt>) died: $?
+=item ($method): (apt-config) died: $?
 
 I<@$config_source> has exited uncleanly.
 More diagnostic is supposed to be on I<STDERR>.
 
-=item CZ<>E<lt>$methodZ<>E<gt>: (CZ<>E<lt>apt-configZ<>E<gt>): failed to output anything
+=item ($method): (apt-config): failed to output anything
 
 I<@$config_source> has exited cleanly,
 but failed to provide any output to parse at all.
@@ -693,55 +686,51 @@ That's why B<File::AptFetch> doesn't read configuration files by itself
 
 sub _cache_configuration {
     my $self = shift @_;
-    @apt_config and
-      return;
+    @apt_config                                                    and return;
     $self->{me} = IO::Pipe->new;
     
-    defined($self->{pid} = fork) or
-      die qq|fork (apt-config) failed: $!|;
+    defined( $self->{pid} = fork )    or die qq|fork (apt-config) failed: $!|;
 
-    unless($self->{pid})          {
+    unless( $self->{pid} )   {
         $self->{me}->writer;
-        $self->{me}->autoflush(1);
-        open STDIN, q|<|, q|/dev/null|                               or
-          die qq|reopen (STDIN) failed: $!|;
-        open STDOUT, q|>&=|, $self->{me}->fileno                     or
-          die qq|dup (STDOUT) failed: $!|;
-        exec @{File::AptFetch::ConfigData->config(q|config_source|)} or
-          die qq|exec failed: $!|; };
+        $self->{me}->autoflush( 1 );
+        open STDIN, q|<|, q|/dev/null|   or die qq|reopen (STDIN) failed: $!|;
+        open STDOUT, q|>&=|, $self->{me}->fileno                        or die
+          qq|dup (STDOUT) failed: $!|;
+        exec @{File::AptFetch::ConfigData->config( q|config_source| )}  or die
+          qq|exec failed: $!| }
 
     local $SIG{PIPE} = q|IGNORE|;
     $self->{me}->reader;
-    $self->{me}->autoflush(1);
+    $self->{me}->autoflush( 1 );
 
     $self->_read;
-    $self->{me}->close or
-      return qq|C<$self->{method}>: close (C<apt-config>) failed: $!|;
-    $self->{ALRM_error} and
-      return qq|C<$self->{method}>: (C<apt-config>): timeouted|;
-    $self->{CHLD_error} and
-      return qq|C<$self->{method}>: (C<apt-config>) died: $self->{CHLD_error}|;
-    @{$self->{log}} or
-      return qq|C<$self->{method}>: (C<apt-config>): failed to output anything|;
+    $self->{me}->close                                               or return
+      qq|($self->{method}): close (apt-config) failed: $!|;
+    $self->{ALRM_error}                                             and return
+      qq|($self->{method}): (apt-config): timeouted|;
+    $self->{CHLD_error}                                             and return
+      qq|($self->{method}): (apt-config) died: $self->{CHLD_error}|;
+    @{$self->{log}}                                                  or return
+      qq|($self->{method}): (apt-config): failed to output anything|;
     my @cache;
-    while(my $line = shift @{$self->{log}}) {
+    while( my $line = shift @{$self->{log}} ) {
 # XXX: Isn't Debian wonderful? -----------vvvvvvv-vvvvvvv
-        $line =~ m{^([a-z-]+(?:::[a-z-]+)*(?:::)?)(?:::)*\s+"(.*)";$}i or
-          return qq|C<$self->{method}>: ($line): that's unparsable|;
-        defined $2 && $2 ne '' or next;
+        $line =~ m{^([a-z-]+(?:::[a-z_-]+)*(?:::)?)(?:::)*\s+"(.*)";$}i     or
+          return qq|($self->{method}): ($line): that's unparsable|;
+        defined $2 && $2 ne ''                                        or next;
         push @cache, qq|$1=$2|;
-        $cache[-1] =~ s{ }{%20}g;  };
-    unless(File::AptFetch::ConfigData->config(q|lib_method|)) {
-        foreach my $rec (@cache) {
-            $rec =~ m{^Dir::Bin::methods=(.+)$} or
-              next;
-            File::AptFetch::ConfigData->set_config(lib_method => $1);
-            last;                 };                           };
+        $cache[-1] =~ s{ }{%20}g               }
+    unless( File::AptFetch::ConfigData->config( q|lib_method| )) {
+        foreach my $rec ( @cache ) {
+            $rec =~ m{^Dir::Bin::methods=(.+)$}                       or next;
+            File::AptFetch::ConfigData->set_config( lib_method => $1 );
+            last                    }                             }
     @apt_config = ( @cache );
 # FIXME: Do I need it?
     delete @$self{qw| me pid |};
 # XXX: Or C<1> would be returned.
-    return '';            };
+    return ''             }
 
 =item B<_uncache_configuration>
 

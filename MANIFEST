@@ -1,10 +1,10 @@
 Build.PL
-Changes
+File-AptFetch-v0.0.9.tar.gz
 lib/File/AptFetch.pm
 lib/File/AptFetch/Cookbook.pod
 MANIFEST			This list of files
 META.yml
-README
+t/0.t
 t/copy.t
 t/DB.pm
 t/file.t

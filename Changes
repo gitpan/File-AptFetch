@@ -1,0 +1,55 @@
+  v0.1.4 20140209
+      F::AF::S pre-release.
+
+      *   *$ConfigData{apt_source}* parser has been rewriten: accepting
+          new config entries, more strictures.
+
+      *   Incompatible change! Message parser has been rewritten: long
+          promised changing hyphens to underscores, more strictures.
+
+      *   Pipe reader has been rewritten: runs on select(2), eval has
+          been dropped; side effect -- all possible messages are read at
+          once (not one-by-one, as before).  Probable regression (may be
+          there's none): what if a message is that big that it doesn't
+          fit in buffer?
+
+      *   TS has been reloaded.  Ridiculous "INIT { use_ok }" has been
+          dropped from t/0.t.
+
+      *   Attempt to declare legal stuff correctly without dependecies
+          boosting.
+
+  v0.0.9 20101205
+      Mostly cosmetic change (one underscore added in
+      _cache_configuration parsing re) in order to work with APT of
+      squeeze.
+
+      *   Requiring perl of v.5.8.0 at minimum.
+
+      *   Playing with POD in diags has been plain stupid.
+
+      *   Misguided attempt to survive the die of "Interrupted system
+          call" (btw, TS only, F::AF is still affected).
+
+      *   Misguided attempt to fix missing log of signaling tests.
+
+      *   Adding simplest test-unit that's run first and BAIL_OUTs for
+          any reason.
+
+  v0.0.8 20101125
+      Panic release -- methods have no will to report any progress.
+
+      *   *$ConfigData{timeout}* has been invented.  Default timeout was
+          bumped 12x times in order to recover from too silent
+          APT-methods.
+
+      *   Hopefully fixing part of FAILs of cpan-testers.
+
+  v0.0.7 20090511
+
+      *   First release.
+
+  v0.0.0 20090222
+
+      *   Initialization.
+

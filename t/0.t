@@ -1,58 +1,52 @@
-#!/usr/bin/perl
-# $Id: 0.t 431 2010-12-05 01:07:42Z whynot $
+# $Id: 0.t 494 2014-02-07 17:28:56Z whynot $
+# Copyright 2010, 2014 Eric Pozharski <whynot@pozharski.name>
+# GNU GPLv3
+# AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
 
 use strict;
 use warnings;
 
 package main;
-use version 0.50; our $VERSION = qv q|0.0.1|;
+use version 0.50; our $VERSION = qv q|0.1.2|;
 
-use t::TestSuite;
+use t::TestSuite qw| :temp :mthd :diag |;
 use Test::More;
+use File::AptFetch;
 
-my $apt_lib = t::TestSuite::FAF_discover_lib;
-plan skip_all => q|not *nix, or misconfigured|        unless defined $apt_lib;
-plan skip_all => q|not Debian, or alike|                      unless $apt_lib;
-
-INIT { use_ok q|File::AptFetch|             or BAIL_OUT }
-INIT { use_ok q|File::AptFetch::ConfigData| or BAIL_OUT }
-
-use File::Temp   qw| tempdir tempfile |;
-use Cwd;
+my $Apt_Lib = t::TestSuite::FAFTS_discover_lib;
+plan
+  !defined $Apt_Lib ? ( skip_all => q|not *nix, or misconfigured| ) :
+  !$Apt_Lib         ? ( skip_all =>       q|not Debian, or alike| ) :
+                      ( tests    =>                             3 );
 
 File::AptFetch::ConfigData->set_config( timeout => 10 );
 
-my $arena  = tempdir q|FAF_0_XXXXXX|;
-my $lib_method = File::AptFetch::ConfigData->config( q|lib_method| );
-my( $fh, $fake_method ) = tempfile q|FAF_0_XXXXXX|, DIR => $arena;
-chmod 0755, $fh                                                or BAIL_OUT $!;
-t::TestSuite::FAF_prepare_method *$fh, q|w-method|, $fake_method;
-close $fh                                                      or BAIL_OUT $!;
-$fake_method = ( split m{/}, $fake_method )[-1];
+my $arena = FAFTS_tempdir nick => q|dtag0403|;
+my $stderr = FAFTS_tempfile nick => q|ftag084a|, dir => $arena;
+my $fake_method = FAFTS_tempfile nick => q|mtagd6c8|, dir => $arena;
+chmod 0755, $fake_method                                       or BAIL_OUT $!;
+$fake_method = FAFTS_prepare_method $fake_method, q|w-method|, $stderr;
 
 my $config_source = File::AptFetch::ConfigData->config( q|config_source| );
-( $fh, my $fake_source ) = tempfile q|config_0_XXXXXX|, DIR => $arena;
-chmod 0755, $fh                                                or BAIL_OUT $!;
-t::TestSuite::FAF_prepare_method *$fh, q|y-method|, $fake_source,
+my $fake_source = FAFTS_tempfile nick => q|ftagf2b7|, dir => $arena;
+FAFTS_prepare_method $fake_source, q|y-method|, $stderr, 
   qq|Dir::Bin::methods "$arena";|;
-close $fh                                                      or BAIL_OUT $!;
 File::AptFetch::ConfigData->set_config( config_source => [ $fake_source ]);
 
 my $rc  = File::AptFetch->init( $fake_method );
 isa_ok $rc, q|File::AptFetch|                                 or BAIL_OUT $rc;
-
 undef $rc;
 
 my @fails;
 while( -1 != ( my $pid = wait )) { push @fails, $pid }
-t::TestSuite::FAF_diag join ' ', map qq|[$_]|, @fails               if @fails;
-ok !@fails, scalar( @fails ) . q| zombies found|                  or BAIL_OUT;
+FAFTS_diag join ' ', map qq|[$_]|, @fails                           if @fails;
+ok !@fails, @fails . q| zombies found|                 or BAIL_OUT q|zombies|;
 
-t::TestSuite::FAF_clean_up $arena;
-rmdir $arena;
-
-ok !-d $arena, q|clean-ups|                                       or BAIL_OUT;
-
-plan tests => 5;
+my $serr = t::TestSuite::FAFTS_get_file $stderr;
+is $serr, qq|{{{TERM}}}\n|, qq|{STDERR} isn't empty|                        or
+  BAIL_OUT q|no {STDERR}|;
+unless( -t STDOUT || -f q|Changes.pod| )  {
+    $serr = [ split m{\n}, $serr ];
+    print STDERR qq|# $_\n| foreach @$serr }
 
 # vim: syntax=perl

@@ -1,13 +1,13 @@
-#!/usr/bin/perl
-# $Id: Build.PL 431 2010-12-05 01:07:42Z whynot $
+# $Id: Build.PL 495 2014-02-09 19:52:15Z whynot $
 
 use strict;
 use warnings;
 
 package main;
-use version 0.50; our $VERSION = qv q|0.0.6|;
+# TODO:201402092122:whynot: Damnit, doesn't remember I<0.50>, move to I<0.77> asap.
+use version 0.50; our $VERSION = qv q|0.1.4|;
 
-use Module::Build 0.20;
+use Module::Build 0.28;
 
 =head1 OVERVIEW
 
@@ -19,8 +19,7 @@ F</var/lib/apt/methods>).
 So it's not XS (and can't be), B<F::AF> forks.
 However one doesn't need fork for each file or session.
 The IPC is B<pipe>
-(and can't be anything else
-(later, I'll check if socket can be used instead of 2 pipes for each method)).
+(and can't be anything else).
 As you can see there's a limit of number of methods available simultaneously
 posed by the maximum number of open filehandles
 (APT methods aren't that numerous anyway).
@@ -83,22 +82,31 @@ Should be distributed with Perl itself too.
 =cut
 
 my $builder = Module::Build->new(
-  module_name       =>                         q|File::AptFetch|,
-  license           =>                                   q|lgpl|,
-  dist_author       =>       q|Eric Pozharski <whynot@cpan.org>|,
-  dist_version_from =>                   q|lib/File/AptFetch.pm|,
-  sign              =>                                         1,
+  module_name       =>                          q|File::AptFetch|,
+  dynmic_config     =>                                          1,
+  dist_author       =>        q|Eric Pozharski <whynot@cpan.org>|,
+  dist_version_from =>                         q|lib/AptFetch.pm|,
+  sign              =>                                          1,
   requires          =>
-  { perl        => qv( q|5.8.0| ),
-    q|IO::Pipe| =>             ''                              },
-  build_requires    => { q|Test::More| =>                   '' },
-  PL_files          =>
- {( -f q|README.PL|  ? ( q|README.PL|  => q|README|  ) : ( )),
-  ( -f q|Changes.PL| ? ( q|Changes.PL| => q|Changes| ) : ( )) },
-  add_to_cleanup    =>
-[qw| *.tmp *.bak foo.* FAF_*_?????? |,
-  ( -f q|README.PL|  ? q|README|  : ( )),
-  ( -f q|Changes.PL| ? q|Changes| : ( ))                      ]);
+  { perl => qv q|5.8.0|, version => q|0.050|, q|IO::Pipe| => '' },
+  build_requires    =>
+  { q|Test::More| => '',   q|File::Temp| => '',    q|Cwd| => '' },
+  pm_files => { q|lib/AptFetch.pm| =>   q|lib/File/AptFetch.pm| },
+  pod_files         =>
+  { q|lib/Cookbook.pod| =>    q|lib/File/AptFetch/Cookbook.pod| },
+  add_to_cleanup    => [qw|                 *.tmp *.bak skip_* |] );
+
+# TODO:201402091303:whynot: B<Software::License> support has been added to B<M::B> I<0.36_14>, so 20100822, so B<perl> I<5.12.2>, so B<version> I<0.83>
+if( version->parse( $Module::Build::VERSION ) > version->parse( q|0.036| )) {
+    $builder->license( q|LGPL_3_0| );
+    $builder->configure_requires(
+      q|Module::Build| => version->parse( q|0.036|))                         }
+else                                                                        {
+    $builder->license( q|open_source| );
+    $builder->configure_requires(
+      q|Module::Build| => version->parse( q|0.028| ));
+    $builder->meta_add( { resources =>
+    { license => q|http://www.gnu.org/licenses/lgpl-3.0.txt| }})             }
 
 =head1 BUILD-TIME CONFIGURATION
 
@@ -106,29 +114,27 @@ my $builder = Module::Build->new(
 
 =cut
 
-#$builder->config_data(lib_method    => q|/usr/lib/apt/methods|);
-
 =item C<lib_method>
 
 That sets location of APT methods.
 It's unrequired,
 it will be set any time APT configuration is sourced.
-L<File::AptFetch/_cache_configuration> and
-L<File::AptFetch/_uncache_configuration> have more.
+L<File::AptFetch/_cache_configuration()> and
+L<File::AptFetch/_uncache_configuration()> have more.
 
 =cut
 
-$builder->config_data( config_source => [ qw| /usr/bin/apt-config dump | ]);
+#$builder->config_data(lib_method    => q|/usr/lib/apt/methods|);
 
 =item C<config_source>
 
 Required.
 C<ARRAY> ref that will be B<exec>ed.
-L<File::AptFetch/_cache_configuration> has more.
+L<File::AptFetch/_cache_configuration()> has more.
 
 =cut
 
-$builder->config_data( signal => q|TERM| );
+$builder->config_data( config_source => [qw| /usr/bin/apt-config dump |]);
 
 =item C<signal>
 
@@ -138,20 +144,23 @@ L<File::AptFetch/DESTROY> has more.
 
 =cut
 
-$builder->config_data( timeout => 120 );
+$builder->config_data( signal => q|TERM| );
 
 =item C<timeout>
 
-(I<v.0.0.8>)
+I<(v.0.0.8)>
 Required.
 I've believed, that could stay hardcoded.
 I was wrong.
-L<File::AptFetch/_read> has more.
+L<File::AptFetch/_read()> has more.
 
 =back
 
 =cut
 
+$builder->config_data( timeout => 120 );
+
+$builder->recursive_test_files( 1 );
 $builder->create_build_script( );
 
 =head1 TEST-SUITE
@@ -162,7 +171,7 @@ Two things should be tested in regard with B<F::AF>:
 
 =item methods and structures
 
-I wouldn't say I'm happy with this part (F<t/void.t>).
+I wouldn't say I'm happy with this part (F<t/void/*.t>).
 It's mostly a crash-type testing.
 And a problem here is that I'm not completely sure what an input (from methods
 side) here could be.
@@ -182,8 +191,8 @@ Anyone?
 And one note.
 B<F::AF> is absolutely useles outside APT based world
 (I'm not about F<*.deb>, I'm about APT).
-Then F<t/file.t> and F<t/copy.t> skip completely.
-Meanwhile F<t/void.t> enables some cute workaround, that would provide
+Then F<t/file/*.t> and F<t/copy/*.t> skip completely.
+Meanwhile F<t/void/*.t> enables some cute workaround, that would provide
 all needed C<apt-config(1)> functionality without that executable itself.
 (Just in case on that platform there will be Debian some day.)
 But we still stay within POSIX world -- no future outside.
@@ -194,7 +203,7 @@ But we still stay within POSIX world -- no future outside.
 
 =item pure distribution
 
-L<http://search.cpan.org/dist/File-AptFetch/>
+<http://search.cpan.org/dist/File-AptFetch/>
 
 =item and debianization stuff too
 
@@ -212,7 +221,7 @@ L<http://search.cpan.org/dist/File-AptFetch/>
 
 =item please report here
 
-L<http://rt.cpan.org/Public/Dist/Display.html?Name=File-AptFetch/>
+<http://rt.cpan.org/Public/Dist/Display.html?Name=File-AptFetch/>
 
 =item please don't report there
 
@@ -226,7 +235,7 @@ L<http://rt.cpan.org/Public/Dist/Display.html?Name=File-AptFetch/>
 
 =item *
 
-Copyright 2009 by Eric Pozharski E<lt>whynot@cpan.orgZ<>E<gt>
+Copyright 2009, 2010, 2014 by Eric Pozharski <whynot@cpan.org>
 
 =item *
 
@@ -235,6 +244,6 @@ AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
 =item *
 
 GNU Lesser General Public License v3
-L<http://www.gnu.org/licenses/lgpl.txt>
+<http://www.gnu.org/licenses/lgpl.txt>
 
 =back

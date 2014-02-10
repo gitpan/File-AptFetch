@@ -1,24 +1,26 @@
 ---
-name: File-AptFetch
-version: v0.0.9
+abstract: 'perl interface onto APT-Methods.'
 author:
   - 'Eric Pozharski <whynot@cpan.org>'
-abstract: perl interface onto APT-Methods.
-license: lgpl
-resources:
-  license: http://opensource.org/licenses/lgpl-license.php
 build_requires:
-  Test::More: ''
-requires:
-  IO::Pipe: ''
-  perl: v5.8.0
+  Cwd: 0
+  File::Temp: 0
+  Test::More: 0
 configure_requires:
-  Module::Build: 0.340201
-provides:
-  File::AptFetch:
-    file: lib/File/AptFetch.pm
-    version: v0.0.9
-generated_by: Module::Build version 0.340201
+  Module::Build: 0.036
+dynamic_config: 1
+generated_by: 'Module::Build version 0.38, CPAN::Meta::Converter version 2.110440'
+license: lgpl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
+name: File-AptFetch
+provides:
+  File::AptFetch:
+    file: lib/AptFetch.pm
+    version: v0.1.4
+requires:
+  perl: v5.8.0
+resources:
+  license: http://www.gnu.org/licenses/lgpl-3.0.txt
+version: v0.1.4

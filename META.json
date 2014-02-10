@@ -1,0 +1,48 @@
+{
+   "abstract" : "perl interface onto APT-Methods.",
+   "author" : [
+      "Eric Pozharski <whynot@cpan.org>"
+   ],
+   "dynamic_config" : 1,
+   "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.110440",
+   "license" : [
+      "lgpl_2_1"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "File-AptFetch",
+   "prereqs" : {
+      "build" : {
+         "requires" : {
+            "Cwd" : 0,
+            "File::Temp" : 0,
+            "Test::More" : 0
+         }
+      },
+      "configure" : {
+         "requires" : {
+            "Module::Build" : "0.036"
+         }
+      },
+      "runtime" : {
+         "requires" : {
+            "perl" : "v5.8.0"
+         }
+      }
+   },
+   "provides" : {
+      "File::AptFetch" : {
+         "file" : "lib/AptFetch.pm",
+         "version" : "v0.1.4"
+      }
+   },
+   "release_status" : "stable",
+   "resources" : {
+      "license" : [
+         "http://www.gnu.org/licenses/lgpl-3.0.txt"
+      ]
+   },
+   "version" : "v0.1.4"
+}

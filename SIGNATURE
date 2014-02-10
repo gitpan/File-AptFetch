@@ -1,5 +1,5 @@
 This file contains message digests of all files listed in MANIFEST,
-signed via the Module::Signature module, version 0.63.
+signed via the Module::Signature module, version 0.68.
 
 To verify the content in this distribution, first make sure you have
 Module::Signature installed, then type:
@@ -14,26 +14,37 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 adfa58a524de36981161cdac8d0b24e4d002ff71 Build.PL
-SHA1 9abb43784a8db915d6ffcb58935d5a7795fec118 File-AptFetch-v0.0.9.tar.gz
-SHA1 6ce6f273e1dfee677c28b915796ce4bbd6b451b8 MANIFEST
-SHA1 85fa77d988f96969f7c554efa0b03fc97bb6e2b4 META.yml
-SHA1 7c6b0e87762de5c85daae1835e358504925f9635 lib/File/AptFetch.pm
-SHA1 d5d1ea4235690e2237597915698d421e7cac8257 lib/File/AptFetch/Cookbook.pod
-SHA1 e140a01700211e1ff7e4e1dd35aee892dd52baa9 t/0.t
-SHA1 aa1fc7e5b2c7bd780a3cd01181dec6623c40b21c t/DB.pm
-SHA1 836a64afe6320c05211854db4fa15bf0263a2f2d t/TestSuite.pm
-SHA1 39970c21bb5193539ef639b4c2c83d52fa1af765 t/copy.t
-SHA1 218fd14ad7bd78ade0c95afd7f911090a3015a0c t/file.t
-SHA1 b07af45110c7967ec57bb85563f65f25ab60e8c6 t/void.t
+SHA1 167628fef9dfa553fe87681cafd1b2b3c40be4f5 Build.PL
+SHA1 8fc491cea7b15bdd5897d7cb102daf6f116e3ad1 Changes
+SHA1 20670ae427678201172873da0e62296eebff94ef MANIFEST
+SHA1 5892db99f5a4e5c51763fd4f940d92a9b23bde5f META.json
+SHA1 2414c0ac8850396edd88d791e4242eb9d8d62d97 META.yml
+SHA1 781b1d99b5450aedbbea84927f3bfb4c4402a28b README
+SHA1 d66bdc52ce0f2c0d3207b67ca512bb274d8e0c08 lib/AptFetch.pm
+SHA1 bfe074d125afea421f7c6c56e63698cc912944c4 lib/Cookbook.pod
+SHA1 60231d607a473b629b72c908b46d5f782a8541d3 t/0.t
+SHA1 296b90336c4b16bce10b83663ec6a8f508d59f44 t/TestSuite.pm
+SHA1 d3ffb1c6971972057b6b63a3e60437c782b56484 t/copy/0.t
+SHA1 1db9482f5bb528b759520d1240a3cc700d9ae7f6 t/copy/fail.t
+SHA1 dae2cdd12bc3f4496b041837e11cf9e72074c706 t/copy/one.t
+SHA1 5064e1113893ccb52e66effba98e70885ddaccef t/copy/perm.t
+SHA1 b25aeb1853a92c86928f8c5d857093a13f58845a t/copy/two.t
+SHA1 071c266d10826ecb7e42f3e33e66dd646880843f t/file/0.t
+SHA1 fe96c0d6031883deacadbb3c6f13493bb8d3d999 t/file/fail.t
+SHA1 94f4b6c7956ebb30b417e5ac09ea0b0f67e719cb t/file/one.t
+SHA1 0f652ad559acf328998811a0f412d6f2666c7c72 t/file/two.t
+SHA1 4bfd79e76d2245e0cb770625e9d20d225a64f765 t/void/aptconfig.t
+SHA1 c9ae6f9a5c7f78040f9e19211cc4486821ff63b2 t/void/configure.t
+SHA1 ec8ceed7703d98974f5722d34365d4b3c54ad5f1 t/void/destroy.t
+SHA1 35fa119b7aafe420ed9eed7898827c83d1814197 t/void/handshake.t
 SHA1 7a40148f0762230a8defbac996271faa0ac2cd0e t/w-method
 SHA1 ebe8ce7e08cd17419a018af21c88ad3164e679a2 t/x-method
 SHA1 7f1773e91e0feff654943e6725458ba2d1a99e67 t/y-method
 SHA1 b28cab2552d5e2215e5ef596eb69a0e1f365f8cb t/z-method
 -----BEGIN PGP SIGNATURE-----
-Version: GnuPG v1.4.9 (GNU/Linux)
+Version: GnuPG v1.4.12 (GNU/Linux)
 
-iD8DBQFM+69r1qsM9O+FbKQRAt6fAJ9d2FwAdk4qCAUxpWUVHkExmnsT8gCfXrAz
-fPh99463MBCth1p/kXgA8EI=
-=3idP
+iD8DBQFS99z01qsM9O+FbKQRArEOAKC3TqXy/Z/H65IsanyKwbFa7skiUwCfRoHo
+ksMFbAgpapJFKIXtC61n7RY=
+=sm9V
 -----END PGP SIGNATURE-----

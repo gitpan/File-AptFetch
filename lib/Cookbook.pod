@@ -1,8 +1,10 @@
 =pod
 
-=for comment $Id: Cookbook.pod 431 2010-12-05 01:07:42Z whynot $
+=for comment $Id: Cookbook.pod 494 2014-02-07 17:28:56Z whynot $
 
-=for comment $VERSION = qv q|0.0.3|;
+=for comment $VERSION = qv q|0.1.2|;
+
+=for comment Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 
 =for comment AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
 
@@ -105,6 +107,10 @@ I<(upstream)>
 That marks a request completion.
 I suppose that after this message a method forgets about just completed request
 ("Quotation Needed (tm)").
+I<(v0.1.2)>
+Sometimes method leaves remains (or fossils, if you like) of served request
+what should have failed but succeeded;
+KEE of F<file> method covers some details.
 
 =item 400 URI Failure
 
@@ -125,7 +131,7 @@ It's supposed that C<600>s will gone in at once.
 
 I<(downstream)>
 That's the "Hello, pal!" of the application.
-There's a field I<$message{send-config}> (supposed to be in use with C<100>);
+There's a field I<$message{send_config}> (supposed to be in use with C<100>);
 although C<601> is sent each time method is started.
 
 =item 101 Log
@@ -186,7 +192,7 @@ however there are (at least one: C<quiet>) undocumented items too.
 
 =item Filename
 
-I<(upZ<>E<sol>down-stream)>
+I<(up/down-stream)>
 The 2nd of two most used fields.
 Designates the target for request.
 It's local FS path and doesn't need and bear scheme.
@@ -209,7 +215,7 @@ So, I believe, that the format is in F<RFC822> format
 with F<RFC1123> comments applied.
 I don't know why it's this way.)
 Meanwhile, B<File::AptFetch> exports returned value
-(via I<$message{last-modified}>),
+(via I<$message{last_modified}>),
 while provides no means for time checks.
 (However, refering to symlink maintanance issue --
 is mtime checks duty of method or application?)
@@ -263,7 +269,7 @@ if the size can't be retrieved before fetching.
 
 =item URI
 
-I<(upZ<>E<sol>down-stream)>
+I<(up/down-stream)>
 The 1st of two most used fields.
 Designates the source for request.
 This field's value must start with B<scheme>;
@@ -314,9 +320,9 @@ The conversation between application ("APP") and method ("MTD") is like that:
 
 =over
 
-=item APP E<lt>- "100 Capabilities" E<lt>- MTD
+=item APP <- "100 Capabilities" <- MTD
 
-=item APP -E<gt> "601 Configuration" -E<gt> MTD
+=item APP -> "601 Configuration" -> MTD
 
 Those are the very first messages.
 Both are required.
@@ -324,14 +330,14 @@ I don't think that C<601> could be sent before C<100> is received
 (that C<100> states the method is up and running).
 So does B<File::AptFetch>.
 
-=item APP -E<gt> "600 URI Acquire" -E<gt> MTD
+=item APP -> "600 URI Acquire" -> MTD
 
 Requests should be filed as quick as possible (in sense --- with least pause).
 I suppose, that application shouldn't wait for responces.
 So here is no cycle actually.
 File requests when you need something, and then check for completion.
 
-=item APP E<lt>- "200 URI Start" E<lt>- MTD
+=item APP <- "200 URI Start" <- MTD
 
 That seems to be purely informational.
 (I<v0.0.8>)
@@ -341,9 +347,9 @@ then the method restarts transfer and manifests this this way.
 Once, I've seen it five times in row.
 I can't comment if method would give up ever.
 
-=item APP E<lt>- "201 URI Done" E<lt>- MTD
+=item APP <- "201 URI Done" <- MTD
 
-=item APP E<lt>- "400 URI Failure" E<lt>- MTD
+=item APP <- "400 URI Failure" <- MTD
 
 Only one of them should be sent (that's obvious).
 Either marks completion of request -- successful or not.
@@ -357,12 +363,17 @@ Either marks completion of request -- successful or not.
 One common behaviour should be mentioned.
 Methods are either local or remote (that's obvious).
 Local methods require I<scheme-specific-part> in I<$message{uri}> to be
-absoulte and it must start with lone slash (C<'E<sol>'>).
-Remote methods require double-slash (C<'E<sol>E<sol>'>).
+absoulte and it must start with lone slash (C<'/'>).
+Remote methods require double-slash (C<'//'>).
 Either would complain otherwise.
 
 And one more, that seems all I<$message{message}>s bear trailing space.
 I've better note, in case I would ever spot one that doesn't.
+
+And one piece of advice.
+Don't mess with methods.
+They ain't forgetting.
+And they ain't forgiving.
 
 =head2 copy:
 
@@ -454,8 +465,8 @@ Known Easter Eggs are:
 
 =item *
 
-Etch'es version of APT method doesn't returns I<$message{md5sum-hash}> and
-I<$message{sha256-hash}>.
+Etch'es version of APT method doesn't returns I<$message{md5sum_hash}> and
+I<$message{sha256_hash}>.
 Since both (Etch'es and Lenny's) versions has I<$message{version}> set to
 C<1.0> off C<100> message, you can find out what version of APT you have only
 by experimenting.
@@ -473,12 +484,29 @@ then the method surprisingly succeedes, but hashes are of empty file (puzled).
 
 =item *
 
-What makes me wonder yet more about what the actual code is is:
-if permissions are the same restrictive,
-but I<scheme-specific-part> starts with double-slash, then the method fails.
-But the I<$message{message}> is
+I<(v0.1.2)>
+EE that laid just here is retracted.
+At the time the TS was lazy (units reused samples).
+At present I can't verify what was going on in pre-Squeeze.
+
+=item *
+
+I<(v0.1.2)>
+(Following route sounds really weird and there isn't RL scenario when it could
+possibly happen but that's the way it is.)
+As of Wheezy:
+(1) file F<foo> isn't readable;
+(2) access it;
+(3) access all right file F<bar> with leading double-slash URI.
+Then get this I<$message{message}>:
 
     Could not open file %s - open (13 Permission denied) 
+
+But!
+It refers F<foo>;
+while I<$message{uri}> refers F<bar>.
+F<t/file/fail.t> (around C<ftagaab5>) really does it.
+No comments.
 
 =item *
 
@@ -506,11 +534,11 @@ B<apt-config(1)>
 
 =head1 AUTHOR
 
-Eric Pozharski, E<lt>whynot@cpan.orgZ<>E<gt>
+Eric Pozharski, <whynot@cpan.org>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2009, 2010 by Eric Pozharski
+Copyright 2009, 2010, 2014 by Eric Pozharski
 
 This overview is free in sense: AS-IS, NO-WARANRTY, HOPE-TO-BE-USEFUL.
 This overview is released under CC-SA.

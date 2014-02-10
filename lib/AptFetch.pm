@@ -1,13 +1,13 @@
-# $Id: AptFetch.pm 431 2010-12-05 01:07:42Z whynot $
-# Copyright 2009, 2010 Eric Pozharski <whynot@pozharski.name>
-# AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
+# $Id: AptFetch.pm 495 2014-02-09 19:52:15Z whynot $
+# Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
+# AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
 
 use warnings;
 use strict;
 
 package File::AptFetch;
-use version 0.50; our $VERSION = qv q|0.0.9|;
+use version 0.50; our $VERSION = qv q|0.1.4|;
 
 use File::AptFetch::ConfigData;
 use IO::Pipe;
@@ -34,7 +34,7 @@ Hence B<F:AF> forks.
 =item *
 
 There's no command-line interface for methods.
-The IPC is two pipes (I<STDIN> and I<STDOUT> from method POV).
+The IPC is two pipes (I<STDIN> and I<STDOUT> from method's POV).
 
 =item *
 
@@ -100,7 +100,7 @@ C<SIGPIPE> is not.
 It's supported only while interacting with a child.
 If method decides to die some time outside those IPC sections, then your
 process will get C<SIGCHLD> and possible C<SIGPIPE>.
-(To be honest, may be I'm overperssimistic here
+(To be honest, may be I'm overpessimistic here
 (if process goes away it becomes a zombie;
 if it didn't closed its input (your output), then should stay;
 than there's no place for C<SIGPIPE>).
@@ -120,7 +120,8 @@ That's possible that issue will stay as caveat.
 I<@$log> is fragile.
 Don't touch it.
 However, there's a possibility of I<@$log> corruption, like this.
-If method goes insane and outputs unparsable messages, then L</gain> will give
+If method goes insane and outputs unparsable messages, then L</gain()> will
+give
 up immedately leaving I<@$log> unempty.
 In that case you're supposed to recreate B<F::AF> object (or give up).
 If you don't then strange things can happen (mostly -- give-ups again).
@@ -135,7 +136,7 @@ Right now, clean I<@$diag> yourself, if that becomes an issue.
 =item *
 
 You're supposed to maintain a balance of requests and fetches.
-If you try L</gain> when there's no unfinished requests,
+If you try L</gain()> when there's no unfinished requests,
 then method will timeout.
 There's nothing to worry about actually except hanging for 120sec.
 
@@ -178,8 +179,7 @@ The above explanation about explicit dereference applies here too.
 B<(note)>
 B<Message headers> are refered as keys of some fake global I<%$message>.
 So C<Filename> becomes I<$message{filename}>,
-and C<Last-Modified> -- I<$message{last-modified}>
-(as you can see that notation is somewhat syntactically incorrect).
+and C<Last-Modified> -- I<$message{last_modified}>.
 I hope it's clear from context is that B<header> down- or up-stream.
 
 B<(note)> Through out this POD "log item" means one line in I<@$log>;
@@ -212,10 +212,11 @@ to be not I<$SIG{CHLD}>ed.
 
 =over
 
-=item B<init>
+=cut
 
-    ref(my $fetch = File::AptFetch->init($method)) or
-      die $fetch;
+=item B<init()>
+
+    ref( my $fetch = File::AptFetch->init( $method )) or die $fetch;
 
 That's an initialization stuff.
 APT-Methods are userspace executables, you know, hence it B<fork>s.
@@ -225,14 +226,13 @@ object;
 Otherwise a string describing issue is returned.
 Any diagnostic from B<fork>ed instance and, later, B<exec>ed I<$method> goes
 through C<STDERR>.
-(And see L</_cache_configuration>.)
+(And see L</_cache_configuration()>.)
 
 An idea behind this ridiculous construct is that someday, in some future, there
 will be a lots of concurency.
-(I didn't say that would be threads, did I?)
 Hence it's impossible to maintain one package-wide store for fail description.
 All methods of B<File::AptFetch> return descriptive strings in case of errors.
-B<&init> just follows them.
+B<init()> just follows them.
 
 I<$method> is saved in same named key for reuse.
 
@@ -247,7 +247,7 @@ It's either picked from configuration (build-time) or from B<apt-config> output
 (run-time) (in that order).
 It wasn't found in either place -- fairly strange APT you have.
 
-=item (method) is unspecified
+=item ($method) is unspecified
 
 I<$method> is required argument,
 so, please, provide.
@@ -262,7 +262,7 @@ The exit code (no postprocessing at all) is provided in braces.
 
 I<$method> failed to configure within time frame provided.
 (I<v.0.0.8>)
-L</_read> has more about timeouts.
+L</_read()> has more about timeouts.
 
 =item ($method): ($Status): that's supposed to be (100 Capabilities)
 
@@ -274,9 +274,9 @@ B<File::AptFetch> has given up.
 
 =back
 
-Yet refer to L</_parse_status_code>, L</_parse_message>, and
-L</_cache_configuration> -- those can emit their own give-up codes
-(they are passed up immediately by B<init> without postprocessing).
+Yet refer to L</_parse_status_code()>, L</_parse_message()>, and
+L</_cache_configuration()> -- those can emit their own give-up codes
+(they are passed up immediately by B<init()> without postprocessing).
 
 =cut
 
@@ -296,34 +296,27 @@ sub init        {
     $self->{it} = IO::Pipe->new;
     $self->{me} = IO::Pipe->new;
 
-    defined( $self->{pid} = fork )                                      or die
-      qq|fork ($self->{method}) failed: $!|;
+    defined( $self->{pid} = fork )    or die qq|[fork] ($self->{method}): $!|;
 
-    unless( $self->{pid} )   {
-        $self->{me}->writer;
-        $self->{it}->reader;
-        $self->{me}->autoflush( 1 );
-        $self->{it}->autoflush( 1 );
+    unless( $self->{pid} )                                       {
+        $self->{me}->writer; $self->{me}->autoflush( 1 );
+        $self->{it}->reader; $self->{it}->autoflush( 1 );
         open STDOUT, q|>&=|, $self->{me}->fileno                        or die
-          qq|dup (STDOUT) failed: $!|;
-        open STDIN, q|<&=|, $self->{it}->fileno                         or die
-          qq|dup (STDIN) failed: $!|;
+          qq|[dup] (STDOUT): $!|;
+        open STDIN, q|<&=|, $self->{it}->fileno  or die qq|[dup] (STDIN): $!|;
         exec sprintf q|%s/%s|,
           File::AptFetch::ConfigData->config( q|lib_method| ),
-          $self->{method}                                               or die
-          qq|exec failed: $!| }
+          $self->{method} or die qq|[exec] ($self->{method}): $!| }
 
+# XXX:201402081601:whynot: It's B<local> to B<init()>, right?
     local $SIG{PIPE} = q|IGNORE|;
-    $self->{it}->writer;
-    $self->{me}->reader;
-    $self->{it}->autoflush( 1 );
-    $self->{me}->autoflush( 1 );
+    $self->{it}->writer; $self->{it}->autoflush( 1 );
+    $self->{me}->reader; $self->{me}->autoflush( 1 );
+    $self->{me}->blocking( 0 );
     $self->{diag} = [ ];
 
-    $rc = qq|601 Configuration\n|;
-    $rc .= qq|Config-Item: $_\n|                          foreach @apt_config;
-    $rc .= "\n";
-    $self->{it}->print( $rc );
+    $self->{it}->print( map qq|$_\n|, 
+      q|601 Configuration|, map( qq|Config-Item: $_|, @apt_config ), '' );
 
     $rc = $self->_read;
     $self->{CHLD_error}                                             and return
@@ -339,7 +332,7 @@ sub init        {
 
     return $self }
 
-=item B<DESTROY>
+=item B<DESTROY()>
 
     undef $fetch;
     # or leave the scope
@@ -347,7 +340,7 @@ sub init        {
 That's a destructor for B<File::AptFetch> objects.
 Pipes are destroied first.
 Then, if I<$pid> is found this PID is B<kill>ed, and then,
-if B<kill> happened to be successful,
+if B<kill> happens to be successful,
 the upcoming zombie is reaped.
 B<waitpid> is unconditional and isn't timeout protected.
 
@@ -359,8 +352,8 @@ Refer to B<File::AptFetch::ConfigData> for details.
 
 =cut
 
-sub DESTROY {
-    my $self = shift @_;
+sub DESTROY                {
+    my $self = shift;
     #local $SIG{PIPE} = q|IGNORED|;
 # FIXME: Should close, then warn(?), then delete.
     delete $self->{me};
@@ -369,10 +362,9 @@ sub DESTROY {
     $self->{pid} and
       kill File::AptFetch::ConfigData->config(q|signal|) => $self->{pid} or
       return;
-    waitpid $self->{pid}, 0;
-};
+    waitpid $self->{pid}, 0 }
 
-=item B<request>
+=item B<request()>
 
     my $rc = $fetch->request(
       $target0 => $source,
@@ -437,14 +429,13 @@ No, URI is supposed to have at least one leading slash.
 
 =back
 
-B<&request> pretends to be atomic,
+B<request()> pretends to be atomic,
 the request would happen only in case I<@_> has been parsed successfully.
 
 =cut
 
-sub request  {
-    my $self = shift @_;
-    my %request = @_;
+sub request {
+    my( $self, %request ) = @_;
     my $log;
     while( my( $filename, $source ) = each %request ) {
         my $uri = ref $source ? $source->{uri} : $source;
@@ -457,10 +448,10 @@ Filename: $filename
 
 END_OF_LOG
     $self->{it}->print( $log );
-    push @{$self->{diag}}, split( qr{\n}m, $log ), q||;
-    return '' }
+    push @{$self->{diag}}, split( qr{\n}s, $log ), q||;
+          '' }
 
-=item B<gain>
+=item B<gain()>
 
     $rc = $fetch->gain;
     $rc and die $rc;
@@ -495,23 +486,24 @@ The possible cause would be you've run out of requests
 
 =back
 
-L</_parse_status_code> and L</_parse_message> can emit their own messages.
+L</_parse_status_code()> and L</_parse_message()> can emit their own messages.
 
 =cut
 
-sub gain                                                     {
+sub gain                                              {
     my $self = shift @_;
 
-    $self->_read;
-    $self->{CHLD_error}                                             and return
-      qq|($self->{method}): ($self->{CHLD_error}): died|;
-    @{$self->{log}} && !$self->{log}[-1]                             or return
-      qq|($self->{method}): timeouted without responce|;
-    $self->{ALRM_error}           and return qq|($self->{method}): timeouted|;
+    unless( @{$self->{log}} )                                          {
+        $self->_read;
+        $self->{CHLD_error}                                         and return
+          qq|($self->{method}): ($self->{CHLD_error}): died|;
+        @{$self->{log}} && !$self->{log}[-1]                         or return
+          qq|($self->{method}): timeouted without responce|;
+        $self->{ALRM_error} and return qq|($self->{method}): timeouted| }
 
-    return $self->_parse_status_code || $self->_parse_message }
+    $self->_parse_status_code || $self->_parse_message }
 
-=item B<_parse_status_code>
+=item B<_parse_status_code()>
 
     $rc = $self->_parse_status_code;
     return $rc if $rc;
@@ -536,14 +528,14 @@ then backups the processed item.
 =cut
 
 sub _parse_status_code {
-    my $self = shift @_;
+    my $self = shift;
     $self->{log}[0] =~ m|^(\d{3})\s+(.+)|                            or return
       qq|($self->{method}): ($self->{log}[0]): that's not a Status Code|;
     @$self{qw| Status status |} = ( $1, $2 );
     push @{$self->{diag}}, shift @{$self->{log}};
-    return              }
+                     '' }
 
-=item B<_parse_message>
+=item B<_parse_message()>
 
     $rc = $self->_parse_message;
     return $rc if $rc;
@@ -553,17 +545,41 @@ Processes the log entry.
 Atomically sets either I<%$capabilities> (if I<$Status> is C<100>)
 or I<%$message> (any other).
 Each key is lowercased.
+(I<v0.1.4)>)
+Since L</_read()> has been rewritten there could be multiple messages in
+I<@$log>;
+those are preserved for next turn.
 
+I<v0.1.2>
+Each hyphen (C<->) is replaced with an underscore (C<_>).
+For convinience reasons
+(compare S<C<< 'last-modified' => $time >>> with
+S<C<< last_modified => $time >>>.)
 B<(bug)>
-It's ridiculous to write S<C<'Last-Modified' =E<gt> $time>>
-instead of S<C<last_modified =E<gt> $time>>, isn't it?
-In next release hyphens (C<'-'>) will be substituted with underscore (C<'_'>).
+What if a method yelds C<Foo-Bar:> and C<Foo_Bar:> headers?
+(C<RFC2822> headers are anything but space and colon after all.)
+Right now, B<_parse_message()> will fail if a message header gets reset.
+But those headers are different and should be handled appropriately.
+They aren't.
 
 =over
 
+=item ($method): ($log_item): message must be terminated by empty line
+
+APT method API dictates that messages must be terminated by empty line.
+This one is not.
+Shouldn't happen.
+
+=item ($method): ($log_item): that resets header ($header)
+
+The leading message header (I<$header>) has been seen before.
+That's a panic.
+The offending and all consequent items are left on I<@$log>.
+Shouldn't happen.
+
 =item ($method): ($log_item): that's not a Message
 
-The I<$log_item> must be C<qrZ<>E<sol>^[0-9a-z-]+:(?E<gt>\s+).+E<sol>i>.
+The I<$log_item> must be C<< qr/^[0-9a-z-]+:(?>\s+).+/i >>.
 It's not.
 No luck this time.
 The offending and all consequent items are left on I<@$log>.
@@ -579,21 +595,28 @@ Beware and prevent before going for parsing.
 =cut
 
 sub _parse_message {
-    my $self = shift @_;
+    my $self = shift;
     my %cache;
-    while( @{$self->{log}} )       {
-        $self->{log}[0] =~ m{^([0-9a-z-]+):(?>\s+)(.+)}i             or return
-          qq|($self->{method}): ($self->{log}[0]): that's not a Message|;
-        $cache{lc $1} = $2;
-        push @{$self->{diag}}, shift @{$self->{log}};
-# XXX: Should check for empty line but falsehood.
-        unless( $self->{log}[0] ) {
+    while( @{$self->{log}} )                        {
+        if( $self->{log}[0] eq '' ) {
             push @{$self->{diag}}, shift @{$self->{log}};
-            last;                  }}
+                                last }
+        my( $header, $field ) =
+          $self->{log}[0] =~ m{^([0-9a-z-]+):(?>\s+)(.+)}i           or return
+          qq|($self->{method}): ($self->{log}[0]): that's not a Message|;
+        $header =~ tr{A-Z-}{a-z_};
+        exists $cache{$header}                                      and return
+          qq|($self->{method}): ($self->{log}[0]): | .
+                    qq|that resets header ($header)|;
+        $cache{$header} = $field;
+        push @{$self->{diag}}, shift @{$self->{log}} }
+    $self->{diag}[-1] eq ''                                          or return
+      qq|($self->{method}): ($self->{diag}[-1]): | .
+       q|message must be terminated by empty line|;
     $self->{$self->{Status} == 100 ? q|capabilities| : q|message|} = \%cache;
-    return ''       }
+                 '' }
 
-=item B<_cache_configuration>
+=item B<_cache_configuration()>
 
     $rc = $self->_cache_configuration;
     return $rc if $rc;
@@ -603,15 +626,15 @@ B<fork>s.
 B<die>s if B<fork> fails.
 B<fork>ed child B<exec>s an array set in I<@$config_source>
 (from B<File::AptCache::ConfigData>).
-If I<$lib_method> (from B<File::AptFetch::ConfigData>) is unset,
+If I<$lib_method> (from B<F::AF::CD>) is unset,
 then parses prepared cache for I<Dir::Bin::methods>
 item and (if finds) sets I<$lib_method>.
 It doesn't complain if I<$lib_method> happens to be left unset.
 If cache is set it B<return>s without any activity.
 
 I<@$config_source> is subject to the build-time configuration.
-It's preset with S<C<qw[ E<sol>usrZ<>E<sol>binZ<>E<sol>apt-config dump ]>>
-(YMMV, refer to B<File::AptFetch::ConfigData> to be sure).
+It's preset with S<C<qw[ /usr/bin/apt-config dump ]>>
+(YMMV, refer to B<F::AF::CD> to be sure).
 I<@$config_source> must provide reasonable output -- that's the only
 requirement
 (look below for details).
@@ -628,17 +651,57 @@ That cache is lexical
 later;
 such iterator is missing right now).
 
+I<(v0.1.2)>
+Parsing cycle has suffered total rewrite.
+First line is split on space into I<$name> and I<$value> (or else).
+Then comes validation
+(it woulnd't be needed if I<@$config_source> of B<F::AF::CD> would be
+hardcoded, it's not):
+* I<$name> must consist of alphanumerics, underscores, pluses, minuses,
+dots, colons, and slashes (C<qr[\w/:.+-]>) (or else);
+* (that's an heuristic) colons come in pairs (or else);
+* I<$value> must be double-quote (C<">) enclosed, with no double-quote
+inside allowed (or else);
+* there must be terminating semicolon (C<;>) (or else).
+Then comes cooking (all cooking is found by observation, it mimics APT-talk
+with methods):
+* trailing double pair-of-colons in I<$name> is trimmed to single pair;
+* every space in I<$value> is percent escaped (C<%20>);
+* every equal sign in I<$value> is percent escaped (C<3d>).
+
+That last one, needs some explanation.
+B<apt.conf(5)> clearly states:
+"Values must not include backslashes or extra quotation marks".
+
+    apt-config dump | grep \\\\
+
+disagrees on backslashes (if you're upgraded enough).
+So does B<F::AF>: backslashes are passed through.
+After some experiments double-quote handling looks, roughly, like this:
+* double-quotes must come in pairs;
+* those double-quotes are dropped from I<$value> withouth any visible effects
+(double-quotes, not enclosed content;
+it stays intact;
+whatever content, empty string is content too);
+* if there's any odd double-quote that fails parsing.
+B<F::AF> doesn't need to do anything about it --
+I<@$config_source> of B<F::AF::CD> is supposed to handle those itself.
+
+B<(bug)>
+What should be investigated:
+* what if double-quote is explicitly percent-escaped in F<apt.conf>?
+* how percents in I<$value> are handled?
+Pending.
+
 Diagnostic provided:
 
 =over
 
 =item ($method): ($line): that's unparsable
 
-The I<$line> must be C<qrZ<>E<sol>^[a-z-]+(?:::[a-z_-]+)*(?:::)*\s+".*";$E<sol>i>.
-I<$line> doesn't match.
-Please note B<caveat> below.
+Validation (described above) has failed.
 
-=item ($method): close (apt-config) failed: $!
+=item ($method): [close] (apt-config) failed: $!
 
 After processing input a pipe is B<close>d.
 That B<close> failed with I<$!>.
@@ -649,7 +712,7 @@ While processing a fair 120sec timeout is given
 (it's reset after each I<$line>).
 I<@$config_source> hanged for that time.
 
-=item ($method): (apt-config) died: $?
+=item ($method): (apt-config) died: ($?)
 
 I<@$config_source> has exited uncleanly.
 More diagnostic is supposed to be on I<STDERR>.
@@ -661,44 +724,23 @@ but failed to provide any output to parse at all.
 
 =back
 
-B<(caveat)>
-B<apt-cache> can be triggered to output many
-(at least 2, that's what I can see) double-colon (C<'::'>) separators.
-B<apt-get> (and ...(?)) removes such extra separators,
-while retaining the last pair
-("quotation needed" (TM))
-when talking to APT-Methods.
-So does B<File::AptFetch>.
-
-B<(bug)>
-I've discovered, that APT replaces each space (C<S<' '>>) in configuration
-value
-with %-escape (C<'%20'>).
-I have no fscking understunding what yet escapes are in use.
-I know for sure, that double-double-quotes (C<'""'>) are removed
-(so S<C<'ABC { "abc" "xyz"; };'>> in configuration file becomes
-S<C<'ABC "abc xyz";'>> in B<apt-cache> output).
-That's why B<File::AptFetch> doesn't read configuration files by itself
-(one less point of frustration).
-(goddamn Debian.)
-
 =cut
 
 sub _cache_configuration {
-    my $self = shift @_;
+    my $self = shift;
     @apt_config                                                    and return;
     $self->{me} = IO::Pipe->new;
     
-    defined( $self->{pid} = fork )    or die qq|fork (apt-config) failed: $!|;
+    defined( $self->{pid} = fork )  or die qq|[fork] (apt-config) failed: $!|;
 
-    unless( $self->{pid} )   {
+    unless( $self->{pid} )     {
         $self->{me}->writer;
         $self->{me}->autoflush( 1 );
-        open STDIN, q|<|, q|/dev/null|   or die qq|reopen (STDIN) failed: $!|;
+        open STDIN, q|<|, q|/dev/null|   or die qq|[open] (STDIN) failed: $!|;
         open STDOUT, q|>&=|, $self->{me}->fileno                        or die
-          qq|dup (STDOUT) failed: $!|;
+          qq|[dup] (STDOUT) failed: $!|;
         exec @{File::AptFetch::ConfigData->config( q|config_source| )}  or die
-          qq|exec failed: $!| }
+          qq|[exec] (apt-config) failed: $!| }
 
     local $SIG{PIPE} = q|IGNORE|;
     $self->{me}->reader;
@@ -706,33 +748,37 @@ sub _cache_configuration {
 
     $self->_read;
     $self->{me}->close                                               or return
-      qq|($self->{method}): close (apt-config) failed: $!|;
+      qq|($self->{method}): [close] (apt-config) failed: $!|;
     $self->{ALRM_error}                                             and return
       qq|($self->{method}): (apt-config): timeouted|;
     $self->{CHLD_error}                                             and return
-      qq|($self->{method}): (apt-config) died: $self->{CHLD_error}|;
+      qq|($self->{method}): (apt-config) died: ($self->{CHLD_error})|;
     @{$self->{log}}                                                  or return
       qq|($self->{method}): (apt-config): failed to output anything|;
     my @cache;
     while( my $line = shift @{$self->{log}} ) {
-# XXX: Isn't Debian wonderful? -----------vvvvvvv-vvvvvvv
-        $line =~ m{^([a-z-]+(?:::[a-z_-]+)*(?:::)?)(?:::)*\s+"(.*)";$}i     or
-          return qq|($self->{method}): ($line): that's unparsable|;
-        defined $2 && $2 ne ''                                        or next;
-        push @cache, qq|$1=$2|;
-        $cache[-1] =~ s{ }{%20}g               }
+        my( $name, $value ) = split m{ }, $line, 2;
+        $name !~ m{^[\w/:.+-]+$}          ||
+        $name =~ m{(?<!:)(?:::)*:(?!:)}   ||
+        !$value || $value !~ m{^"([^"]*)";$}                           and return
+          qq|($self->{method}): ($line): that's unparsable|;
+        ($value = $1) eq ''                                          and next;
+        undef                                     while $name =~ s{::::$}{::};
+        $value =~ s{ }{%20}g;
+        $value =~ s{=}{%3d}g;
+        push @cache, qq|$name=$value|          }
     unless( File::AptFetch::ConfigData->config( q|lib_method| )) {
         foreach my $rec ( @cache ) {
             $rec =~ m{^Dir::Bin::methods=(.+)$}                       or next;
             File::AptFetch::ConfigData->set_config( lib_method => $1 );
-            last                    }                             }
+                               last }                             }
     @apt_config = ( @cache );
 # FIXME: Do I need it?
     delete @$self{qw| me pid |};
 # XXX: Or C<1> would be returned.
-    return ''             }
+                       '' }
 
-=item B<_uncache_configuration>
+=item B<_uncache_configuration()>
 
     File::AptFetch::_uncache_configuration;
     # or
@@ -747,16 +793,15 @@ That cacheing would happen whenever that cache would be required again
 (subject to the natural control flow).
 
 B<(caveat)>
-B<&_cache_configuration> sets I<$lib_method> (in B<File::AptFetch::ConfigData>)
+B<_cache_configuration> sets I<$lib_method> (in B<File::AptFetch::ConfigData>)
 (if it happens to be undefined).
 B<&_uncache_configuration> untouches it.
 
 =cut
 
-sub _uncache_configuration () {
-    @apt_config = ( );         };
+sub _uncache_configuration () { @apt_config = ( ) }
 
-=item B<_read>
+=item B<_read()>
 
     $fetch->_read;
     $fetch->{ALRM_error} and
@@ -830,28 +875,24 @@ then finishes.
 
 =item unknown error
 
-It's actually possible that main reading cycle would return with neither line,
-nor timeout, nor child exit.
+(I<v.0.1.4>)
+It used to be read-with-alarm-in-eval.
+It's not anymore, thus any B<signal(7)> will kill a process.
 Then it dies.
 
 =back
 
 =cut
 
-sub _read     {
-    my $self = shift @_;
+sub _read {
+    my $self = shift;
 
     $self->{ALRM_error} = 0;
-    while( 1 )       {
+    while( 1 )                    {
         my $line;
-        local $SIG{ALRM} = q|IGNORE|;
-        eval               {
-            local $SIG{ALRM} = sub { die qq|ALRM!!!\n| };
-            alarm $self->{timeout};
-            defined( $line = $self->{me}->getline )                     or die
-              qq|CHLD!!!\n| };
-        alarm 0;
-        if( $@ eq qq|ALRM!!!\n| )    {
+        my $vec = '';
+        vec( $vec, $self->{me}->fileno, 1 ) = 1;
+        unless( select $vec, undef, undef, $self->{timeout} ) {
             my $rc;
             foreach my $fn ( keys %{$self->{trace}} ) {
                 -f $fn                                                or next;
@@ -859,23 +900,19 @@ sub _read     {
                 $rc += ( -s $fn ) - $self->{trace}{$fn};
                 $self->{trace}{$fn} = -s _             }
             $rc                                                      and next;
-            $self->{ALRM_error} = 1;
-            last                      }
-        elsif( $@ eq qq|CHLD!!!\n| ) {
+            $self->{ALRM_error} = 1;                      last }
+        $line = [ $self->{me}->getlines ];
+        unless( @$line ) {
 # FIXME: Should timeout B<waitpid>.
             waitpid $self->{pid}, 0;
             $self->{CHLD_error} = $?;
-            last                      }
-        elsif( $@ )                  {
-# XXX: Shouldn't be here.
-            die $@                    }
-        chomp $line;
-        push @{$self->{log}}, $line;
+                     last }
+        chomp @$line;
+        push @{$self->{log}}, @$line;
 # XXX: Trust no-one...
-        last                                                                if
-          $line eq '' }
+        $line->[-1] eq '' and last }
 
-    return q|| }
+        '' }
 
 =back
 
@@ -883,15 +920,16 @@ sub _read     {
 
 L<File::AptFetch::Cookbook>,
 S<"APT Method Itnerface"> in B<libapt-pkg-doc> package,
-B<apt-config(1)>
+B<apt-config(1)>,
+B<apt.conf(5)>
 
 =head1 AUTHOR
 
-Eric Pozharski, E<lt>whynot@cpan.orgZ<>E<gt>
+Eric Pozharski, <whynot@cpan.org>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2009, 2010 by Eric Pozharski
+Copyright 2009, 2010, 2014 by Eric Pozharski
 
 This library is free in sense: AS-IS, NO-WARANRTY, HOPE-TO-BE-USEFUL.
 This library is released under GNU LGPLv3.

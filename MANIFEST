@@ -2,7 +2,10 @@ Build.PL
 Changes
 lib/AptFetch.pm
 lib/Cookbook.pod
+lib/Simple.pm
 MANIFEST			This list of files
+META.json
+META.yml
 README
 t/0.t
 t/copy/0.t
@@ -14,6 +17,9 @@ t/file/0.t
 t/file/fail.t
 t/file/one.t
 t/file/two.t
+t/simple/0.t
+t/simple/copy.t
+t/simple/fail.t
 t/TestSuite.pm
 t/void/aptconfig.t
 t/void/configure.t
@@ -23,6 +29,4 @@ t/w-method
 t/x-method
 t/y-method
 t/z-method
-META.yml
-META.json
 SIGNATURE    Added here by Module::Build

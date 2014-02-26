@@ -1,3 +1,12 @@
+  v0.1.5 20140226
+
+      *   Trying to test minimally implemented File::AptFetch::Simple.
+
+      *   Attempt to fix got-''-expected-'{{{TERM}}}' build errors
+          (guesswork).  Attempt to fix got-'1'-expected-'' build errors
+          (probably, in vein).  Attempt to fix unexpected locale
+          settings build errors.
+
   v0.1.4 20140209
       F::AF::S pre-release.
 
@@ -17,7 +26,7 @@
           dropped from t/0.t.
 
       *   Attempt to declare legal stuff correctly without dependecies
-          boosting.
+          boosting.  (v0.1.5 -- nope.)
 
   v0.0.9 20101205
       Mostly cosmetic change (one underscore added in

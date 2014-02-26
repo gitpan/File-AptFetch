@@ -1,4 +1,4 @@
-# $Id: TestSuite.pm 491 2014-01-31 22:59:49Z whynot $
+# $Id: TestSuite.pm 496 2014-02-26 17:39:18Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -10,7 +10,7 @@ package DB;
 sub get_fork_TTY { xterm_get_fork_TTY() }
 
 package t::TestSuite;
-use version 0.50; our $VERSION = qv q|0.1.2|;
+use version 0.77; our $VERSION = version->declare( v0.1.3 );
 use parent qw| Exporter |;
 use lib     q|./blib/lib|;
 
@@ -191,21 +191,50 @@ sub FAFTS_tempdir ( % ) {
     $dn = sprintf q|%s/%s|, cwd, $dn                        unless $args{dir};
     return $dn           }
 
+=item B<FAFTS_wrap()>
+
+    use t::TestSuite qw/ :mthd /;
+    ( $rv, $stderr ) = FAFTS_wrap { die q|gotch ya| };
+
+Safety wrapper around code that could B<die> or B<fork>-and-B<die>.
+Returns whatever I<code>.
+If I<code> fails, then I<$@> is returned.
+In list context also returns whatever has been printed on I<STDERR>.
+In either case I<STDERR> is passed to L<FAFTS_diag()>.
+
+=cut
+
+my $root_pid = $$;
 sub FAFTS_wrap ( & )                         {
+    require POSIX                              or die q|<POSIX> is missing\n|;
     my $code = shift;
     my $stderr = FAFTS_tempfile nick => q|stderr|;
     open my $bckerr, q|>&|, \*STDERR     or croak qq|save [dup] (STDERR): $!|;
 
     open STDERR, q|>|, $stderr;
-    my $rv = $code->();
+    my( $rv, $ee );
+    eval { $rv = $code->(); 1 }                                   or $ee = $@;
+    $$ != $root_pid                                 and POSIX::_exit( !!$ee );
     open STDERR, q|>&|, $bckerr       or croak qq|restore [dup] (STDERR): $!|;
 
-    FAFTS_diag ref $rv eq q|File::AptFetch| ?
-                   qq|method: ($rv->{pid})| : qq|RV: ($rv)|;
+    $rv = $ee                                              unless defined $rv;
+    FAFTS_diag !defined $rv                    ?           q|RV: (undef)| :
+      ref $rv && $rv->isa( q|File::AptFetch| ) ? qq|method: ($rv->{pid})| :
+                                                            qq|RV: ($rv)|;
     open $bckerr, q|<|, $stderr             or croak qq|[open] ($stderr): $!|;
     read $bckerr, $stderr, -s $bckerr;
     FAFTS_diag $stderr;
     return wantarray ? ( $rv, $stderr ) : $rv }
+
+=item B<FAFTS_get_file()>
+
+    use t::TestSuite qw/ :file /;
+    $content = FAFTS_get_file $filename;
+
+Simple file content retriever.
+Whatever has been retrieved is passed to L<FAFTS_diag()>.
+
+=cut
 
 sub FAFTS_get_file ( $ ) {
     my $fn = shift @_;
@@ -229,9 +258,23 @@ sub FAFTS_prepare_method ( $$$@ ) {
     chmod 0755, $fho or croak qq|[chmod] ($fh): $!|;
            ( split m{/}, $fh )[-1] }
 
-sub FAFTS_wait_and_gain ( $;$ )              {
+=item B<FAFTS_wait_and_gain()>
+
+    use t::TestSuite qw/ :mthd /;
+    ( $rv, $stderr ) = FAFTS_wait_and_gain;
+
+Very special wrapper for B<File::AptFetch::gain()>.
+Waits ~10sec until any activity happens on a method side.
+Then returns whatever B<F::AF::gain()> has returned
+(RV is also passed to B<FAFTS_diag()>).
+In list context collected I<STDERR> is returned too.
+
+=cut
+
+sub FAFTS_wait_and_gain ( $;$ )       {
     my $eng = shift @_;
-    my $timeout = shift @_ || 10;
+# XXX:201402232036:whynot: Probably fixes this: http://www.cpantesters.org/cpan/report/b9de484c-9594-11e3-ae04-8631d666d1b8
+    my $timeout = shift @_ || 20;
     my( $rc, $stderr );
     my $mark = $eng->{message};
     while( $timeout-- ) {
@@ -242,8 +285,8 @@ sub FAFTS_wait_and_gain ( $;$ )              {
           $mark != $eng->{message}  ||
           $rc                                                        and last;
         sleep 1          }
-    FAFTS_diag $rc                                                 unless $rc;
-    return wantarray ? ( $rc, $stderr ) : $rc }
+    FAFTS_diag $rc;
+    wantarray ? ( $rc, $stderr ) : $rc }
 
 =item B<FAFTS_discover_lib()>
 
@@ -277,6 +320,8 @@ whatever value of I<Dir::Bin::methods> parameter has been found.
 
 =back
 
+Also, unconditionally resets every imaginable locale-wise key in I<%ENV>.
+
 =cut
 
 sub FAFTS_discover_lib ( ) {
@@ -286,6 +331,13 @@ sub FAFTS_discover_lib ( ) {
     my $aptconfig = File::AptFetch::ConfigData->config( q|config_source| );
     $aptconfig && ref $aptconfig eq q|ARRAY|                  or return undef;
     -x $aptconfig->[0]                                           or return '';
+# XXX:201402201914:whynot: Balance:  point to change for everything in TS just before it actually makes any sense.
+# FIXME:201402201918:whynot: B<locale(7)> and B<locale(5)> disagree.
+# http://www.cpantesters.org/cpan/report/6da4431e-9305-11e3-b08a-33eef1eb6092
+    $ENV{$_} = q|POSIX|                                                foreach
+  qw| LC_CTYPE LC_COLLATE LC_TIME LC_NUMERIC LC_MONETARY LC_MESSAGES
+      LC_PAPER   LC_NAME   LC_ADDRESS   LC_TELEPHONE  LC_MEASUREMENT
+      LC_IDENTIFICATION         LC_ALL         LANG         LANGUAGE |;
     my $pid = open my $fh, q{-|}, @$aptconfig                    or return '';
     while(my $line = <$fh>) {
         $line =~ m{^Dir::Bin::methods\s+"(.+)";$}                     or next;

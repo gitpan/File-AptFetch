@@ -1,11 +1,10 @@
-# $Id: Build.PL 495 2014-02-09 19:52:15Z whynot $
+# $Id: Build.PL 496 2014-02-26 17:39:18Z whynot $
 
 use strict;
 use warnings;
 
 package main;
-# TODO:201402092122:whynot: Damnit, doesn't remember I<0.50>, move to I<0.77> asap.
-use version 0.50; our $VERSION = qv q|0.1.4|;
+use version 0.77; our $VERSION = version->declare( v0.1.5 );
 
 use Module::Build 0.28;
 
@@ -88,25 +87,30 @@ my $builder = Module::Build->new(
   dist_version_from =>                         q|lib/AptFetch.pm|,
   sign              =>                                          1,
   requires          =>
-  { perl => qv q|5.8.0|, version => q|0.050|, q|IO::Pipe| => '' },
+  { perl        => qv v5.8.0,
+    version     =>  qv v0.77,
+    Carp        =>        '',
+    Cwd         =>        '',
+    q|IO::Pipe| =>        ''                                    },
   build_requires    =>
-  { q|Test::More| => '',   q|File::Temp| => '',    q|Cwd| => '' },
-  pm_files => { q|lib/AptFetch.pm| =>   q|lib/File/AptFetch.pm| },
+  { q|Test::More| => '',    q|File::Temp| => '',    POSIX => '' },
+  pm_files =>
+  { q|lib/AptFetch.pm| =>        q|lib/File/AptFetch.pm|,
+    q|lib/Simple.pm|   => q|lib/File/AptFetch/Simple.pm|        },
   pod_files         =>
   { q|lib/Cookbook.pod| =>    q|lib/File/AptFetch/Cookbook.pod| },
   add_to_cleanup    => [qw|                 *.tmp *.bak skip_* |] );
 
 # TODO:201402091303:whynot: B<Software::License> support has been added to B<M::B> I<0.36_14>, so 20100822, so B<perl> I<5.12.2>, so B<version> I<0.83>
-if( version->parse( $Module::Build::VERSION ) > version->parse( q|0.036| )) {
+# FIXME:201402250150:whynot: B<CPAN::Meta> does weird stuff.
+if( version->parse( $Module::Build::VERSION ) > qv v0.36 )      {
     $builder->license( q|LGPL_3_0| );
-    $builder->configure_requires(
-      q|Module::Build| => version->parse( q|0.036|))                         }
-else                                                                        {
+    $builder->configure_requires( q|Module::Build| => qv v0.36 ) }
+else                                                            {
     $builder->license( q|open_source| );
-    $builder->configure_requires(
-      q|Module::Build| => version->parse( q|0.028| ));
-    $builder->meta_add( { resources =>
-    { license => q|http://www.gnu.org/licenses/lgpl-3.0.txt| }})             }
+    $builder->configure_requires( q|Module::Build| => qv v0.28 );
+    $builder->meta_add({ resources =>
+    { license => q|http://www.gnu.org/licenses/lgpl-3.0.txt| }}) }
 
 =head1 BUILD-TIME CONFIGURATION
 

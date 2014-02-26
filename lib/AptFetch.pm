@@ -1,4 +1,4 @@
-# $Id: AptFetch.pm 495 2014-02-09 19:52:15Z whynot $
+# $Id: AptFetch.pm 496 2014-02-26 17:39:18Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use warnings;
 use strict;
 
 package File::AptFetch;
-use version 0.50; our $VERSION = qv q|0.1.4|;
+use version 0.77; our $VERSION = version->declare( v0.1.5 );
 
 use File::AptFetch::ConfigData;
 use IO::Pipe;
@@ -410,6 +410,9 @@ Right now I unaware of any
 
 =back
 
+(I<v0.1.5>)
+If request list is empty then silently succeeds without doing anything.
+
 Actual request is filed at once (subject to buffering though),
 in one big (or not so) chunk (as requested by API).
 I<@$diag> field is updated accordingly.
@@ -447,6 +450,7 @@ URI: $self->{method}:$uri
 Filename: $filename
 
 END_OF_LOG
+    $log                                                         or return '';
     $self->{it}->print( $log );
     push @{$self->{diag}}, split( qr{\n}s, $log ), q||;
           '' }
@@ -545,12 +549,12 @@ Processes the log entry.
 Atomically sets either I<%$capabilities> (if I<$Status> is C<100>)
 or I<%$message> (any other).
 Each key is lowercased.
-(I<v0.1.4)>)
+(I<v0.1.4>)
 Since L</_read()> has been rewritten there could be multiple messages in
 I<@$log>;
 those are preserved for next turn.
 
-I<v0.1.2>
+(I<v0.1.2>)
 Each hyphen (C<->) is replaced with an underscore (C<_>).
 For convinience reasons
 (compare S<C<< 'last-modified' => $time >>> with
@@ -651,7 +655,7 @@ That cache is lexical
 later;
 such iterator is missing right now).
 
-I<(v0.1.2)>
+(I<v0.1.2>)
 Parsing cycle has suffered total rewrite.
 First line is split on space into I<$name> and I<$value> (or else).
 Then comes validation

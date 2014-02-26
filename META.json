@@ -16,14 +16,14 @@
    "prereqs" : {
       "build" : {
          "requires" : {
-            "Cwd" : 0,
             "File::Temp" : 0,
+            "POSIX" : 0,
             "Test::More" : 0
          }
       },
       "configure" : {
          "requires" : {
-            "Module::Build" : "0.036"
+            "Module::Build" : "v0.36.0"
          }
       },
       "runtime" : {
@@ -35,7 +35,11 @@
    "provides" : {
       "File::AptFetch" : {
          "file" : "lib/AptFetch.pm",
-         "version" : "v0.1.4"
+         "version" : "v0.1.5"
+      },
+      "File::AptFetch::Simple" : {
+         "file" : "lib/Simple.pm",
+         "version" : "v0.1.1"
       }
    },
    "release_status" : "stable",
@@ -44,5 +48,5 @@
          "http://www.gnu.org/licenses/lgpl-3.0.txt"
       ]
    },
-   "version" : "v0.1.4"
+   "version" : "v0.1.5"
 }

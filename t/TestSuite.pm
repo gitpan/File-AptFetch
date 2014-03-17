@@ -1,4 +1,4 @@
-# $Id: TestSuite.pm 496 2014-02-26 17:39:18Z whynot $
+# $Id: TestSuite.pm 497 2014-03-17 23:44:36Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -10,7 +10,7 @@ package DB;
 sub get_fork_TTY { xterm_get_fork_TTY() }
 
 package t::TestSuite;
-use version 0.77; our $VERSION = version->declare( v0.1.3 );
+use version 0.77; our $VERSION = version->declare( v0.1.4 );
 use parent qw| Exporter |;
 use lib     q|./blib/lib|;
 
@@ -23,12 +23,12 @@ our @EXPORT_OK =
 qw| FAFTS_diag                       FAFTS_show_message
     FAFTS_tempfile                        FAFTS_tempdir
     FAFTS_prepare_method FAFTS_wrap FAFTS_wait_and_gain
-                                         FAFTS_get_file |;
+    FAFTS_get_file   FAFTS_set_file   FAFTS_append_file |;
 our %EXPORT_TAGS =
 ( diag => [qw| FAFTS_diag                       FAFTS_show_message |],
   temp => [qw| FAFTS_tempfile                        FAFTS_tempdir |],
   mthd => [qw| FAFTS_prepare_method FAFTS_wrap FAFTS_wait_and_gain |],
-  file => [qw|                                      FAFTS_get_file |] );
+  file => [qw| FAFTS_get_file   FAFTS_set_file   FAFTS_append_file |] );
 our $Empty_MD5 = q|d41d8cd98f00b204e9800998ecf8427e|;
 
 $ENV{PERL5LIB} = getcwd . q(/blib/lib);
@@ -66,16 +66,20 @@ B<diag>s (debian config alike) contents of a I<%arg>.
 That I<%arg> is supposedly parsed I<$message> from a method.
 Void if I<STDOUT> isa not terminal, I<$ENV{QUIET}> isa TRUE, or I<@_> is
 empty.
+If value of supposed key from I<%arg> evaluates to C<undef>
+then silently replaces with C<(undef)>.
 
 =back
 
 =cut
 
-sub FAFTS_show_message (%)                                               {
+sub FAFTS_show_message (%)  {
     -t STDOUT && !$ENV{QUIET} && @_                                 or return;
     my %message = @_;
     Test::More::diag(
-      map sprintf( qq|%s: %s\n|, $_, $message{$_} ), sort keys %message ) }
+      map sprintf( qq|%s: %s\n|,
+        $_, defined $message{$_} ? $message{$_} : q|(undef)| ),
+        sort keys %message ) }
 
 =head1 FILES AND DIRECTORIES
 
@@ -191,6 +195,109 @@ sub FAFTS_tempdir ( % ) {
     $dn = sprintf q|%s/%s|, cwd, $dn                        unless $args{dir};
     return $dn           }
 
+=item B<FAFTS_get_file()>
+
+    use t::TestSuite qw/ :file /;
+    $content = FAFTS_get_file $filename;
+
+Simple file content retriever.
+Whatever has been retrieved is passed to L</B<FAFTS_diag()>>.
+
+=cut
+
+sub FAFTS_get_file ( $ ) {
+    my $fn = shift @_;
+    open my $fho, q|<|, $fn                  or croak qq|[open]{r} ($fn): $!|;
+    read $fho, my $buf, -s $fho;
+    FAFTS_diag $buf;
+    open $fho, q|>|, $fn                     or croak qq|[open]{w} ($fn): $!|;
+                     $buf }
+
+=item B<FAFTS_set_file()>
+
+    use t::TestSuite qw/ :file /;
+    FAFTS_set_file $filename, $content;
+
+Simple file content setter.
+I<filename> is set to I<$content>.
+Returns a size I<filename> gets
+(pretty useles, for simmetry reasons).
+If B<open> fails then B<croaks>.
+
+=cut
+
+sub FAFTS_set_file ( $$ ) {
+    my( $fn, $content ) = @_;
+    open my $fh, q|>|, $fn                      or croak qq|[open] ($fn): $!|;
+    print $fh $content;
+                    -s $fh }
+
+=item B<FAFTS_append_file()>
+
+    use t::TestSuite qw/ :file /;
+    FAFTS_append_file $filename, $content;
+
+Simple file content appender.
+I<content> is appended to I<filename>.
+Returns a size I<filename> gets
+(pretty useles, but whatever).
+If B<open> fails then B<croaks>.
+
+=cut
+
+sub FAFTS_append_file ( $$ ) {
+    my( $fn, $content ) = @_;
+    open my $fh, q|>>|, $fn                     or croak qq|[open] ($fn): $!|;
+    print $fh $content;
+                       -s $fh }
+
+=back
+
+=cut
+
+=head1 METHODS AND WRAPPERS
+
+=over
+
+=cut
+
+=item B<FAFTS_prepare_method()>
+
+    use t::TestSuite qw/ :mthd /;
+    $method = FAFTS_prepare_method
+      $method_path, $method_name, $stderr_name, @cmds;
+
+Simple method preparation wrapper.
+I<method_path> is path where to store prepared wanabe method;
+I<method_name> is basename of method template, it's supposed to be in F<./t/>
+directory of distribution.
+I<stderr_name> is path where I<STDERR> of wanabe method will be redirected
+(it'll be stuck at the end of wanabe method)
+(defaults to F</dev/null>).
+I<@cmds> are commands that will be stuck at the end of wanabe method, just
+after I<stderr_name>
+(they might be ignored by method itself unless supported).
+Returns basename of I<method_path> (courtesy);
+that basename can be passed to B<F::AF::init()>
+(proper configuration through I<$F::AF::CD{lib_method}> provided).
+
+=cut
+
+sub FAFTS_prepare_method ( $$$@ ) {
+    my( $fh, $method, $stderr, @cmds ) = ( @_ );
+    $stderr ||= q|/dev/null|;
+# XXX:201403151708:whynot: Can't use B<FAFTS_get_file()> because it will B<diag()> retrieved.  And it's not going to change.
+    open my $fhi, q|<|, qq|t/$method|;
+    read $fhi, my $buf, -s $fhi;
+    FAFTS_set_file $fh, <<END_OF_METHOD . join '', map qq|$_\n|, @cmds;
+$buf;
+
+__DATA__
+$stderr
+END_OF_METHOD
+    chmod 0755, $fh                            or croak qq|[chmod] ($fh): $!|;
+           ( split m{/}, $fh )[-1] }
+
 =item B<FAFTS_wrap()>
 
     use t::TestSuite qw/ :mthd /;
@@ -200,7 +307,7 @@ Safety wrapper around code that could B<die> or B<fork>-and-B<die>.
 Returns whatever I<code>.
 If I<code> fails, then I<$@> is returned.
 In list context also returns whatever has been printed on I<STDERR>.
-In either case I<STDERR> is passed to L<FAFTS_diag()>.
+In either case I<STDERR> is passed to L</B<FAFTS_diag()>>.
 
 =cut
 
@@ -226,38 +333,6 @@ sub FAFTS_wrap ( & )                         {
     FAFTS_diag $stderr;
     return wantarray ? ( $rv, $stderr ) : $rv }
 
-=item B<FAFTS_get_file()>
-
-    use t::TestSuite qw/ :file /;
-    $content = FAFTS_get_file $filename;
-
-Simple file content retriever.
-Whatever has been retrieved is passed to L<FAFTS_diag()>.
-
-=cut
-
-sub FAFTS_get_file ( $ ) {
-    my $fn = shift @_;
-    open my $fho, q|<|, $fn                  or croak qq|[open]{r} ($fn): $!|;
-    read $fho, my $buf, -s $fho;
-    FAFTS_diag $buf;
-    open $fho, q|>|, $fn                     or croak qq|[open]{w} ($fn): $!|;
-                     $buf }
-
-sub FAFTS_prepare_method ( $$$@ ) {
-    my($fh, $method, $stderr, @cmds) = ( @_ );
-    $stderr ||= q|/dev/null|;
-    open my $fho, q|>|, $fh                   or croak qq|[open] ($_[0]): $!|;
-    open my $fhi, q|<|, qq|t/$method|;
-    read $fhi, my $buf, -s $fhi;
-    print $fho $buf;
-    print $fho "\n";
-    print $fho qq|__DATA__\n|;
-    print $fho qq|$stderr\n|;
-    print $fho qq|$_\n|                                         foreach @cmds;
-    chmod 0755, $fho or croak qq|[chmod] ($fh): $!|;
-           ( split m{/}, $fh )[-1] }
-
 =item B<FAFTS_wait_and_gain()>
 
     use t::TestSuite qw/ :mthd /;
@@ -277,7 +352,7 @@ sub FAFTS_wait_and_gain ( $;$ )       {
     my $timeout = shift @_ || 20;
     my( $rc, $stderr );
     my $mark = $eng->{message};
-    while( $timeout-- ) {
+    while( 0 < $timeout-- ) {
         my $serr;
         ( $rc, $serr ) = FAFTS_wrap { $eng->gain };
         $stderr .= $serr;
@@ -287,6 +362,16 @@ sub FAFTS_wait_and_gain ( $;$ )       {
         sleep 1          }
     FAFTS_diag $rc;
     wantarray ? ( $rc, $stderr ) : $rc }
+
+=back
+
+=cut
+
+=head1 DISCOVERY
+
+=over
+
+=cut
 
 =item B<FAFTS_discover_lib()>
 
@@ -347,5 +432,61 @@ sub FAFTS_discover_lib ( ) {
     waitpid $pid, 0;
 # XXX:20090509002544:whynot: What if I<$lib> is C<0>?
                  $lib || '' }
+
+=item B<FAFTS_discover_config()>
+
+    $TSConfig = t::TestSuite::FAFTS_discover_config;
+    defined $TSConfig or plan skip_all => 'no YAML';
+    $TSConfig or plan skip_all => 'no config';
+    $TSConfig = $TSConfig->{some_section};
+    $TSConfig or plan skip_all => 'not configured';
+    $TSConfig->{block} or plan skip_all => 'forbidden';
+
+Simple TS configuration retriever.
+Returns:
+
+=over
+
+=item *
+
+If no YAML is found then retuns C<undef>.
+
+=item *
+
+If no config is found then returns empty string.
+
+=item *
+
+Otherwise HASH.
+
+=back
+
+Filename is hard-coded to be F<ts-config.yaml> in distribution directory.
+It's YAML.
+It's supposed to have sections
+(those are documented in units themselves).
+I<{block}> (with negative meaning!) is supposed but otherwise not enforced.
+
+=cut
+
+sub FAFTS_discover_config ( )                                 {
+    my $config;
+    foreach my $lib ( qw| YAML::Syck YAML::XS YAML::Tiny YAML | ) {
+        eval qq|require $lib|                                         or next;
+        FAFTS_diag qq|[FAFTS_discover_config]: going with {$lib}|;
+        $config = $lib;                                       last }
+    $config                                                   or return undef;
+    my $cfn = q|ts-config.yaml|;
+    -f $cfn                                                      or return '';
+    $config = 
+      $config eq q|YAML::Syck| ? YAML::Syck::LoadFile( $cfn ) :
+      $config eq q|YAML::XS|   ?   YAML::XS::LoadFile( $cfn ) :
+      $config eq q|YAML::Tiny|   ?   YAML::Tiny->read( $cfn ) :
+      $config eq q|YAML|       ?       YAML::LoadFile( $cfn ) :
+                                            croak q|yaml-fsck| }
+
+=back
+
+=cut
 
 1;

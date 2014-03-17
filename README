@@ -43,23 +43,35 @@ BUILD-TIME REQUIREMENTS
 
 BUILD-TIME CONFIGURATION
 
-  "lib_method"
+  *lib_method*
       That sets location of APT methods.  It's unrequired, it will be
       set any time APT configuration is sourced. 
       "_cache_configuration()" in File::AptFetch and
       "_uncache_configuration()" in File::AptFetch have more.
 
-  "config_source"
+  *config_source*
       Required.  "ARRAY" ref that will be execed. 
       "_cache_configuration()" in File::AptFetch has more.
 
-  "signal"
+  *signal*
       Required.  Names a signal that will be sent to method.  "DESTROY"
       in File::AptFetch has more.
 
-  "timeout"
-      *(v.0.0.8)* Required.  I've believed, that could stay hardcoded. 
-      I was wrong.  "_read()" in File::AptFetch has more.
+  *timeout*
+  *tick*
+      *(v0.0.8)* Required.  I've believed, that could stay hardcoded.  I
+      was wrong.  "_read()" in File::AptFetch has more.
+
+      *(v0.1.6)* These are closely related.  From now on, *timeout*
+      keeps the same semantics as before (it's time to cut-off) but is
+      handled differently.  F::AF object sleeped (literally) for time
+      set.  Now it selects (with magic)in *tick*s.  (It's introduced for
+      sake of F::AF::S.)
+
+      Also.  Both must be naturals; They're in seconds; *tick* is
+      supposed to be couple of seconds (default: 5sec); While *timeout*
+      is supposed to be large enough (default: 2min) in respect to
+      network introduced delays.
 
 TEST-SUITE
 

@@ -1,4 +1,4 @@
-# $Id: fail.t 495 2014-02-09 19:52:15Z whynot $
+# $Id: fail.t 497 2014-03-17 23:44:36Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.50; our $VERSION = qv q|0.1.3|;
+use version 0.77; our $VERSION = version->declare( v0.1.4 );
 
 use t::TestSuite qw| :temp :mthd :diag |;
 use File::AptFetch;
@@ -45,11 +45,9 @@ is_deeply [ FAFTS_wrap { $fafc->request( $fsra, $fsra ) } ], [ '', '' ],
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
 is_deeply
-{ rc => $rv,                                   stderr => $serr,
-  status => $fafc->{Status},           log => !@{$fafc->{log}},
+{ rc => $rv,     stderr => $serr,    status => $fafc->{Status},
   uri => $fafc->{message}{uri}, size => $fafc->{message}{size} },
-{ rc => '',                      stderr => '',
-  status => 200,                    log => !1,
+{ rc => '',    stderr => '',    status => 200,
   size => $msg->{size}, uri => qq|copy:$fsra|                  },
                       q|[request] succeedes with self overwrite|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
@@ -118,11 +116,9 @@ is_deeply [ FAFTS_wrap { $fafc->request( $ftga, $fsra ) } ], [ '', '' ],
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
 is_deeply
-{ rc => $rv,                                   stderr => $serr,
-  status => $fafc->{Status},           log => !@{$fafc->{log}},
+{ rc => $rv,    stderr => $serr,     status => $fafc->{Status},
   uri => $fafc->{message}{uri}, size => $fafc->{message}{size} },
-{ rc => '',                  stderr => '',
-  status => 200,                log => !1,
+{ rc => '',  stderr => '',  status => 200,
   uri => qq|copy:$fsra|, size => -s $fsra                      },
           q|[request] succeedes with unabsolute filename though|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
@@ -178,11 +174,9 @@ is_deeply [ FAFTS_wrap { $fafc->request( $ftga, $fsra ) } ], [ '', '' ],
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
 is_deeply
-{ rc => $rv,                                   stderr => $serr,
-  status => $fafc->{Status},           log => !@{$fafc->{log}},
+{ rc => $rv,     stderr => $serr,    status => $fafc->{Status},
   uri => $fafc->{message}{uri}, size => $fafc->{message}{size}    },
-{ rc => '',                  stderr => '',
-  status => 200,                log => !1,
+{ rc => '',  stderr => '',  status => 200,
   uri => qq|copy:$fsra|, size => -s $fsra                         },
   q|[request] succeedes for leading double slashed filename though|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;

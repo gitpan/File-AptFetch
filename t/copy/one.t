@@ -1,4 +1,4 @@
-# $Id: one.t 495 2014-02-09 19:52:15Z whynot $
+# $Id: one.t 497 2014-03-17 23:44:36Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.50; our $VERSION = qv q|0.1.3|;
+use version 0.77; our $VERSION = version->declare( v0.1.4 );
 
 use t::TestSuite qw| :temp :mthd :diag |;
 use File::AptFetch;
@@ -45,11 +45,9 @@ is_deeply
 ( $rv, $serr ) = FAFTS_wrap { $faf->gain };
 FAFTS_show_message %{$faf->{message}};
 is_deeply
-{ rc => $rv,                                 stderr => $serr,
-  status => $faf->{Status},           log => !@{$faf->{log}},
+{ rc => $rv,    stderr => $serr,    status => $faf->{Status},
   uri => $faf->{message}{uri}, size => $faf->{message}{size} },
-{ rc => '',                  stderr => '',
-  status => 200,                log => !1,
+{ rc => '',  stderr => '',  status => 200,
   uri => qq|copy:$fsrc|, size => -s $fsrc                    },
          q|[gain] succeedes while requested file isn't gained|;
 like $faf->{message}{last_modified}, qr(\d{1,2} \w{3} \d{4} [0-9:]{8}),
@@ -90,12 +88,10 @@ is_deeply
 ( $rv, $serr ) = FAFTS_wrap { $faf->gain };
 FAFTS_show_message %{$faf->{message}};
 is_deeply
-{ rc => $rv,                                 stderr => $serr,
-  status => $faf->{Status},           log => !@{$faf->{log}},
+{ rc => $rv,    stderr => $serr,    status => $faf->{Status},
   uri => $faf->{message}{uri}, size => $faf->{message}{size}     },
-{ rc => '',               stderr => $serr,
-  status => 200,                log => !1,
-  uri => qq|copy:$fsrc|, size => -s $fsrc                        },
+{ rc => '', stderr => $serr, status => 200,
+  uri => qq|copy:$fsrc|,  size => -s $fsrc                       },
   q|[gain] succeedes yet again while requested file isn't gained|;
 like $faf->{message}{last_modified}, qr(\d{1,2} \w{3} \d{4} [0-9:]{8}),
   q|{$message{Last-Modified}} seems to be OK|;

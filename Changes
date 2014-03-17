@@ -1,3 +1,21 @@
+  v0.1.6 20140318
+
+      *   Transfer-is-in-progress check is moved to callback.  What
+          could be user-provided.  Introducing *$ConfigData{tick}* and
+          changing *$ConfigData{timeout}* handling.
+
+      *   Another attempt to fix got-''-expected-'{{{TERM}}}' build
+          errors (guesswork).  Another attempt to fix
+          got-'1'-expected-'' build errors (being *@$log* filled with
+          yet-to-be-processed message or empty isn't reliable anymore).
+
+      *   Adding unit with required manual configuration (slow
+          inter-device copy).  That's the very first torturing unit,
+          please welcome.
+
+      *   Investigating weird compatibility problem (two units:
+          t/0/EmMn8o.t and t/0/9raCtd.t).
+
   v0.1.5 20140226
 
       *   Trying to test minimally implemented File::AptFetch::Simple.

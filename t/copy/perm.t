@@ -1,4 +1,4 @@
-# $Id: perm.t 495 2014-02-09 19:52:15Z whynot $
+# $Id: perm.t 497 2014-03-17 23:44:36Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.50; our $VERSION = qv q|0.1.3|;
+use version 0.77; our $VERSION = version->declare( v0.1.4 );
 
 use t::TestSuite qw| :temp :mthd :diag |;
 use File::AptFetch;
@@ -50,11 +50,9 @@ is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
 $msga = $fafc->{message};
 FAFTS_show_message %$msga;
 is_deeply
-{ rc => $rv,                                   stderr => $serr,
-  status => $fafc->{Status},           log => !@{$fafc->{log}},
+{ rc => $rv,     stderr => $serr,    status => $fafc->{Status},
   uri => $fafc->{message}{uri}, size => $fafc->{message}{size} },
-{ rc => '',                  stderr => '',
-  status => 200,                log => !1,
+{ rc => '',  stderr => '',  status => 200,
   uri => qq|copy:$fsrc|, size => -s $fsrc                      },
   q|[request] succeedes to overwrite regular file|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
@@ -94,11 +92,9 @@ is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
 is_deeply
-{ rc => $rv,                                   stderr => $serr,
-  status => $fafc->{Status},           log => !@{$fafc->{log}},
+{ rc => $rv,    stderr => $serr,     status => $fafc->{Status},
   size => $fafc->{message}{size}, uri => $fafc->{message}{uri} },
-{ rc => '',                  stderr => '',
-  status => 200,                log => !1,
+{ rc => '',  stderr => '',  status => 200,
   size => -s $fsrc, uri => qq|copy:$fsrc|                      },
   q|[request] succeedes to retrieve unreadable file|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
@@ -127,11 +123,9 @@ is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
 is_deeply
-{ rc => $rv,                                   stderr => $serr,
-  status => $fafc->{Status},           log => !@{$fafc->{log}},
+{ rc => $rv,     stderr => $serr,    status => $fafc->{Status},
   uri => $fafc->{message}{uri}, size => $fafc->{message}{size} },
-{ rc => '',                  stderr => '',
-  status => 200,                log => !1,
+{ rc => '',  stderr => '',  status => 200,
   uri => qq|copy:$fsrc|, size => -s $fsrc                      },
              q|[request] succeedes to overwrite unwritable file|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
@@ -162,11 +156,9 @@ is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
 is_deeply
-{ rc => $rv,                                   stderr => $serr,
-  status => $fafc->{Status},           log => !@{$fafc->{log}},
+{ rc => $rv,    stderr => $serr,     status => $fafc->{Status},
   uri => $fafc->{message}{uri}, size => $fafc->{message}{size} },
-{ rc => '',                  stderr => '',
-  status => 200,                log => !1,
+{ rc => '',  stderr => '',  status => 200,
   uri => qq|copy:$fsrc|, size => -s $fsrc                      },
          q|[request] succeedes with unreadable source directory|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
@@ -195,11 +187,9 @@ is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
 is_deeply
-{ rc => $rv,                                   stderr => $serr,
-  status => $fafc->{Status},           log => !@{$fafc->{log}},
+{ rc => $rv,    stderr => $serr,     status => $fafc->{Status},
   uri => $fafc->{message}{uri}, size => $fafc->{message}{size} },
-{ rc => '',                  stderr => '',
-  status => 200,                log => !1,
+{ rc => '',  stderr => '',  status => 200,
   uri => qq|copy:$fsrc|, size => -s $fsrc                      },
          q|[request] succeedes with unwritable target directory|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
@@ -227,11 +217,9 @@ is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
 is_deeply
-{ rc => $rv,                                   stderr => $serr,
-  status => $fafc->{Status},           log => !@{$fafc->{log}},
+{ rc => $rv,     stderr => $serr,    status => $fafc->{Status},
   uri => $fafc->{message}{uri}, size => $fafc->{message}{size}           },
-{ rc => '',                  stderr => '',
-  status => 200,                log => !1,
+{ rc => '',  stderr => '',  status => 200,
   uri => qq|copy:$fsrc|, size => -s $fsrc                                },
   q|[request] succeedes with unwritable target directory but file present|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
@@ -278,11 +266,9 @@ is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
 is_deeply
-{ rc => $rv,                                   stderr => $serr,
-  status => $fafc->{Status},           log => !@{$fafc->{log}},
+{ rc => $rv,    stderr => $serr,     status => $fafc->{Status},
   uri => $fafc->{message}{uri}, size => $fafc->{message}{size} },
-{ rc => '',                  stderr => '',
-  status => 200,                log => !1,
+{ rc => '',  stderr => '',  status => 200,
   uri => qq|copy:$fsrc|, size => -s $fsrc                      },
          q|[request] succeedes with unseekable target directory|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
@@ -306,11 +292,9 @@ is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
 is_deeply
-{ rc => $rv,                                   stderr => $serr,
-  status => $fafc->{Status},           log => !@{$fafc->{log}},
+{ rc => $rv,     stderr => $serr,    status => $fafc->{Status},
   uri => $fafc->{message}{uri}, size => $fafc->{message}{size}           },
-{ rc => '',                  stderr => '',
-  status => 200,                log => !1,
+{ rc => '',  stderr => '',  status => 200,
   uri => qq|copy:$fsrc|, size => -s $fsrc                                },
   q|[request] succeedes with unseekable target directory but file present|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;

@@ -1,8 +1,8 @@
 =pod
 
-=for comment $Id: Cookbook.pod 494 2014-02-07 17:28:56Z whynot $
+=for comment $Id: Cookbook.pod 497 2014-03-17 23:44:36Z whynot $
 
-=for comment $VERSION = qv q|0.1.2|;
+=for comment $VERSION = qv v0.1.3;
 
 =for comment Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 
@@ -406,7 +406,7 @@ Known Easter Eggs are:
 
 Inspite of Etch'es (S<v. 0.6.46.4-0.1>) and Lenny's (S<v. 0.7.20>) APT packages
 both have a F<copy> method, and they both set I<$message{version}> to C<1.0> in
-C<100>, Etch'es version don't return hashes at all.
+C<100>, Etch'es version doesn't return hashes at all.
 Beware.
 
 =item *
@@ -449,6 +449,13 @@ then the I<$message{message}> is the same "S<Failed to stat...>".
 =item *
 
 And I<$message{filename}> can start with double-slash.
+
+=item *
+
+(I<v0.1.6>, C<Wheezy>)
+After target's transfer is finished, the method reads it back.
+I can't comment if it's for hash-set calculation or verification.
+If target's media is slow then it's huge performance loss.
 
 =back
 

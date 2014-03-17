@@ -6,7 +6,7 @@
    "dynamic_config" : 1,
    "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.110440",
    "license" : [
-      "lgpl_2_1"
+      "open_source"
    ],
    "meta-spec" : {
       "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
@@ -23,7 +23,7 @@
       },
       "configure" : {
          "requires" : {
-            "Module::Build" : "v0.36.0"
+            "Module::Build" : "0.38"
          }
       },
       "runtime" : {
@@ -35,7 +35,7 @@
    "provides" : {
       "File::AptFetch" : {
          "file" : "lib/AptFetch.pm",
-         "version" : "v0.1.5"
+         "version" : "v0.1.6"
       },
       "File::AptFetch::Simple" : {
          "file" : "lib/Simple.pm",
@@ -48,5 +48,5 @@
          "http://www.gnu.org/licenses/lgpl-3.0.txt"
       ]
    },
-   "version" : "v0.1.5"
+   "version" : "v0.1.6"
 }

@@ -1,4 +1,4 @@
-# $Id: AptFetch.pm 496 2014-02-26 17:39:18Z whynot $
+# $Id: AptFetch.pm 497 2014-03-17 23:44:36Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,9 +7,10 @@ use warnings;
 use strict;
 
 package File::AptFetch;
-use version 0.77; our $VERSION = version->declare( v0.1.5 );
+use version 0.77; our $VERSION = version->declare( v0.1.6 );
 
 use File::AptFetch::ConfigData;
+use Carp;
 use IO::Pipe;
 
 =head1 NAME
@@ -288,6 +289,7 @@ sub init        {
     $self->{method} = shift @_          or return q|($method) is unspecified|;
     $self->{log} = [ ];
     $self->{timeout} = File::AptFetch::ConfigData->config( q|timeout| );
+    $self->{tick} = File::AptFetch::ConfigData->config( q|tick| );
     bless $self, $cls;
     my $rc;
     $rc = $self->_cache_configuration                          and return $rc;
@@ -337,11 +339,9 @@ sub init        {
     undef $fetch;
     # or leave the scope
 
-That's a destructor for B<File::AptFetch> objects.
-Pipes are destroied first.
-Then, if I<$pid> is found this PID is B<kill>ed, and then,
-if B<kill> happens to be successful,
-the upcoming zombie is reaped.
+Cleanups.
+A method is B<kill>ed and B<waitpid>ed, pipes are explicitly closed.
+I anything goes wrong then B<carp>s, for obvious reasons.
 B<waitpid> is unconditional and isn't timeout protected.
 
 The actual signal sent for I<$pid> is configured with I<$signal> in
@@ -352,17 +352,16 @@ Refer to B<File::AptFetch::ConfigData> for details.
 
 =cut
 
-sub DESTROY                {
+sub DESTROY                       {
     my $self = shift;
-    #local $SIG{PIPE} = q|IGNORED|;
-# FIXME: Should close, then warn(?), then delete.
-    delete $self->{me};
-    delete $self->{it};
-# XXX: That's a way dirty.
-    $self->{pid} and
-      kill File::AptFetch::ConfigData->config(q|signal|) => $self->{pid} or
-      return;
-    waitpid $self->{pid}, 0 }
+    if( $self->{pid} )                                            {
+        local $SIG{PIPE} = q|IGNORE|;
+        kill File::AptFetch::ConfigData->config( q|signal| ) => $self->{pid}
+          or carp qq|[kill] ($self->{pid}): nothing to kill or $!| }
+    close $self->{me} or carp qq|[close] (reader): $!|         if $self->{me};
+    close $self->{it} or carp qq|[close] (writer): $!|         if $self->{it};
+    waitpid $self->{pid}, 0                                   if $self->{pid};
+    delete @$self{qw| pid me it |} }
 
 =item B<request()>
 
@@ -443,7 +442,7 @@ sub request {
     while( my( $filename, $source ) = each %request ) {
         my $uri = ref $source ? $source->{uri} : $source;
         $uri   or return qq|($self->{method}): ($filename): URI is undefined|;
-        $self->{trace}{$filename} = '';
+        $self->{trace}{$filename} = { filename => $filename };
         $log .= <<"END_OF_LOG"                         }
 600 URI Acquire
 URI: $self->{method}:$uri
@@ -506,6 +505,55 @@ sub gain                                              {
         $self->{ALRM_error} and return qq|($self->{method}): timeouted| }
 
     $self->_parse_status_code || $self->_parse_message }
+
+=item B<set_callback()>
+
+    File::AptFetch::set_callback %callbacks;
+
+Sets (whatever known) callbacks.
+Semantics and procedures are documented where apropriate.
+Keys of I<%callbacks> are tags
+(subject to hash handling by perl, don't mess);
+key must be among known (or else).
+Values are CODEs (or else);
+whatever previous value was would be vanished.
+Known tags are:
+
+=over
+
+=item C<read>
+
+L</_read()> has more.
+
+=back
+
+Diagnostics provided:
+
+=over
+
+=item (%s): candiate to pass in isn't CODE
+
+Tag C<%s> (may be unknown) tries to set something for callback.
+That must be CODE.
+It's not.
+
+=item (%s): unknown callback
+
+Tag C<%s> is unknown.
+Nothing to with it but B<croak>.
+
+=back
+
+=cut
+
+my $_read_callback;
+sub set_callback ( % )                                              {
+    my %callbacks = @_;
+    while( my( $tag, $code ) = each %callbacks )                   {
+        ref $code eq q|CODE|                                          or croak
+          qq|($tag): candidate to pass in isn't CODE|;
+        if( $tag eq q|read| ) {            $_read_callback = $code }
+        else                  { croak qq|($tag): unknown callback| }}}
 
 =item B<_parse_status_code()>
 
@@ -630,7 +678,7 @@ B<fork>s.
 B<die>s if B<fork> fails.
 B<fork>ed child B<exec>s an array set in I<@$config_source>
 (from B<File::AptCache::ConfigData>).
-If I<$lib_method> (from B<F::AF::CD>) is unset,
+If I<$ConfigData{lib_method}> is unset,
 then parses prepared cache for I<Dir::Bin::methods>
 item and (if finds) sets I<$lib_method>.
 It doesn't complain if I<$lib_method> happens to be left unset.
@@ -659,7 +707,7 @@ such iterator is missing right now).
 Parsing cycle has suffered total rewrite.
 First line is split on space into I<$name> and I<$value> (or else).
 Then comes validation
-(it woulnd't be needed if I<@$config_source> of B<F::AF::CD> would be
+(it woulnd't be needed if I<@{$ConfigData{config_source}}> would be
 hardcoded, it's not):
 * I<$name> must consist of alphanumerics, underscores, pluses, minuses,
 dots, colons, and slashes (C<qr[\w/:.+-]>) (or else);
@@ -689,7 +737,7 @@ it stays intact;
 whatever content, empty string is content too);
 * if there's any odd double-quote that fails parsing.
 B<F::AF> doesn't need to do anything about it --
-I<@$config_source> of B<F::AF::CD> is supposed to handle those itself.
+I<@{$ConfigData{config_source}}> is supposed to handle those itself.
 
 B<(bug)>
 What should be investigated:
@@ -753,6 +801,10 @@ sub _cache_configuration {
     $self->_read;
     $self->{me}->close                                               or return
       qq|($self->{method}): [close] (apt-config) failed: $!|;
+# FIXME: Do I need it?
+    delete @$self{qw| me it |};
+# FIXME: Should timeout B<waitpid>.
+    waitpid delete $self->{pid}, 0                            if $self->{pid};
     $self->{ALRM_error}                                             and return
       qq|($self->{method}): (apt-config): timeouted|;
     $self->{CHLD_error}                                             and return
@@ -764,7 +816,7 @@ sub _cache_configuration {
         my( $name, $value ) = split m{ }, $line, 2;
         $name !~ m{^[\w/:.+-]+$}          ||
         $name =~ m{(?<!:)(?:::)*:(?!:)}   ||
-        !$value || $value !~ m{^"([^"]*)";$}                           and return
+        !$value || $value !~ m{^"([^"]*)";$}                        and return
           qq|($self->{method}): ($line): that's unparsable|;
         ($value = $1) eq ''                                          and next;
         undef                                     while $name =~ s{::::$}{::};
@@ -777,9 +829,7 @@ sub _cache_configuration {
             File::AptFetch::ConfigData->set_config( lib_method => $1 );
                                last }                             }
     @apt_config = ( @cache );
-# FIXME: Do I need it?
-    delete @$self{qw| me pid |};
-# XXX: Or C<1> would be returned.
+# FIXME:201403151954:whynot: Otherwise I<@apt_config> would be returned.  That's not going to change.
                        '' }
 
 =item B<_uncache_configuration()>
@@ -840,35 +890,58 @@ Thus for now:
 
 =item *
 
-The timeout is configurable through I<$timeout>
-(in B<File::AptFetch::ConfigData>)
+The timeout is configurable through I<$ConfigData{timeout}>
 (120sec, by stock configuration;
 no defaults.)
-
-=item *
-
 The timeout is cached in each instance of B<File::AptFetch> object.
 
 =item *
 
-Target filenames are cached in the B<File::AptFetch> object too.
+I<(v0.1.6)>
+Target filenames are cached in the B<F::AF> object.
+For each target there's a HASH.
+In the HASH a key I<filename> is set to target filename value.
 
 =item *
 
-If the cycle of B<_read()> has been timeouted then each target filename is
-checked for size change.
+I<(v0.1.4)>
+Timeout (the big one I<$timeout>) is made in supposedly small
+I<$ConfigData{tick}>s
+(5sec, by stock configuration;
+no defaults.)
+The small timeout is made with 4-arg B<select>.
 
 =item *
 
-If any target file has changed then request processing is considered to be in
-progress yet, and the next cycle is started
-(as if method has reported anything.)
+I<(v0.1.6)>
+If there's no input from method then routing is made as follows:
 
-=item *
+=over
 
-B<(bug)>
-It's clear, that's the place were user-provided callback should be called.
-Although it's not the case yet.
+=item +
+
+Each target's cached HASH is passed to C<read> callback
+(L</set_callback()> has more).
+
+=item +
+
+If any callback returns TRUE then resets timeout counter and
+goes for next I<$tick> long B<select>
+(IOW, file transfer (whatever that means) is in progress).
+
+=item +
+
+If every callbacks return FALSE then advances to timeout and
+goes for next I<$tick> long B<select>.
+
+=item +
+
+I<(not implemented)>
+If any callback returns C<undef> then fails entirely.
+
+=item +
+
+=back
 
 =back
 
@@ -892,31 +965,104 @@ sub _read {
     my $self = shift;
 
     $self->{ALRM_error} = 0;
-    while( 1 )                    {
-        my $line;
+# TODO:201403151935:whynot: There's B<set_callback()>.  Time to move it outside.
+    $_read_callback = \&_read_callback         unless defined $_read_callback;
+    my $timeout = $self->{timeout};
+    while( 1 )                                                     {
+        my @line;
+        $timeout -= $self->{tick};
         my $vec = '';
         vec( $vec, $self->{me}->fileno, 1 ) = 1;
-        unless( select $vec, undef, undef, $self->{timeout} ) {
+        unless( select $vec, undef, undef, $self->{tick} )        {
             my $rc;
-            foreach my $fn ( keys %{$self->{trace}} ) {
-                -f $fn                                                or next;
-                $self->{trace}{$fn} ||= 0;
-                $rc += ( -s $fn ) - $self->{trace}{$fn};
-                $self->{trace}{$fn} = -s _             }
-            $rc                                                      and next;
-            $self->{ALRM_error} = 1;                      last }
-        $line = [ $self->{me}->getlines ];
-        unless( @$line ) {
-# FIXME: Should timeout B<waitpid>.
-            waitpid $self->{pid}, 0;
-            $self->{CHLD_error} = $?;
-                     last }
-        chomp @$line;
-        push @{$self->{log}}, @$line;
+            $rc +=
+              $_read_callback->( $_ ) || 0   foreach values %{$self->{trace}};
+            if( $rc             ) {   $timeout = $self->{timeout} }
+            elsif( $timeout < 0 ) { $self->{ALRM_error} = 1; last }}
+        elsif( @line = $self->{me}->getlines             )        {
+            chomp @line;
+            push @{$self->{log}}, @line;
 # XXX: Trust no-one...
-        $line->[-1] eq '' and last }
+            $line[-1] eq ''                               and last }
+        elsif( $self->{me}->eof                          )        {
+            waitpid delete $self->{pid}, 0;
+            $self->{CHLD_error} = $?;                         last }
+        else                                                      {
+                                         die q|should not be here| }}
 
         '' }
+
+=item B<_read_callback()>
+
+I<(v0.1.6)>
+Internal.
+It's a default I<read> callback
+(L</B<_read()>> has more).
+It was supposed to be simple.
+In vain.
+
+The primary objective is avoiding false negatives at all cost.
+Here comes list of avoided false negatives:
+
+=over
+
+=item *
+
+Somewhere on C<lenny>/C<squeeze> time-span APT methods have changed behaviour.
+In past they opened target for writing instantly.
+Now they create a temporal and upon finishing rename it to target.
+For obvious reasons methods do not communicate neither progress nor filename
+of temporal.
+If naming or handling of unfinished transfers would ever change there will be
+breakage.
+
+=item *
+
+Then.
+When transfer is finished *physically* it's not reported just yet
+(temporal has been renamed).
+A method calculates hashes.
+For obvious reasons methods do not coummunicate progress either.
+Naive approach would be to check size and then just wait forever.
+That's possible size isn't known beforehand.
+So B<_read_callback()> increases number of ticks before signaling timeout.
+That increase is function of tick length (I<$ConfigData{tick}>), current file
+size, and supposed IO speed.
+The IO speed is hardcoded to be 15MB/sec.
+So if media is realy slow (like a diskette or something) there's a possibility
+of breakage.
+However, those nitty-gritty manipulations won't result ever in timeout
+decrease.
+
+=back
+
+For now it's not clear if B<_read_callback()> ought to provide some
+diagnostics.
+Right now it doesn't.
+
+=cut
+
+sub _read_callback   {
+    my $st = shift;
+    defined $st->{filename}                                   or return undef;
+    $st->{tick} =
+      File::AptFetch::ConfigData->config( q|tick| )        unless $st->{tick};
+    $st->{flag} = 5                                unless defined $st->{flag};
+    $st->{tmp} = ( glob qq|$st->{filename}*| )[0]   unless defined $st->{tmp};
+    unless( defined $st->{tmp} )                                    {
+# TODO:201403040310:whynot: Here comes diagnostics.
+# warn sprintf qq|(%s) (%i): missing, ticks left\n|, ( split m{/}, $st->{filename} )[-1], $st->{flag} - 1
+                                                                     }
+    elsif( !-f $st->{tmp}      )                                    {
+# TODO:201403040310:whynot: Here could be diagnostics too.
+# warn sprintf qq|(%s): disappeared, forcing sync\n|, ( split m{/}, $st->{filename} )[-1];
+        undef $st->{tmp}                                             }
+    else                                                            {
+        @$st{qw| size back |} = ( -s $st->{tmp}, $st->{size} || 0 );
+        $st->{factor} = $st->{size} / ( $st->{tick} * 15 * 1024 * 1024 );
+        $st->{factor} = 1                                if 1 > $st->{factor};
+        $st->{flag} = 5 * $st->{factor} if $st->{size} - $st->{back} }
+    0 < $st->{flag}-- }
 
 =back
 

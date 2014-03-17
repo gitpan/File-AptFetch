@@ -1,4 +1,4 @@
-# $Id: two.t 495 2014-02-09 19:52:15Z whynot $
+# $Id: two.t 497 2014-03-17 23:44:36Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.50; our $VERSION = qv q|0.1.3|;
+use version 0.77; our $VERSION = version->declare( v0.1.4 );
 
 use t::TestSuite qw| :temp :mthd :diag |;
 use File::AptFetch;
@@ -57,13 +57,11 @@ my %samples =
   { filename => $ftgb,     uri => qq|copy:$fsrb|,      size => -s $ftgb,
     md5hash => $Copy_Has_Md5hash && q|a484a364925091b4e7b575b89740cb90| } );
 is_deeply
-{ rc => $rv,                                          stderr => $serr,
-  status => $faf->{Status},                    log => !@{$faf->{log}},
+{ rc => $rv,        stderr => $serr,         status => $faf->{Status},
   filename => $faf->{message}{filename},  uri => $faf->{message}{uri},
   size => $faf->{message}{size}, md5hash => $faf->{message}{md5_hash} },
-{ rc => '',            stderr => '',
-  status => 201,          log => !1,
-  %{$samples{$faf->{message}{uri}}}                                   },
+{ rc => '', stderr => '', status => 201,
+      %{$samples{$faf->{message}{uri}}}                               },
                                                q|[gain] succeedes once|;
 $done = $faf->{message}{md5_hash} || $faf->{message}{filename};
 is_deeply [ FAFTS_wait_and_gain $faf ], [ '', '' ], q|tag+8f12|;
@@ -112,13 +110,11 @@ is_deeply [ FAFTS_wait_and_gain $faf ], [ '', '' ], q|tag+0d03|;
   { filename => $ftgb,     uri => qq|copy:$fsrb|,      size => -s $ftgb,
     md5hash => $Copy_Has_Md5hash && q|9a18605db9a2cdcddb8c5b9da163d485| } );
 is_deeply
-{ rc => $rv,                                          stderr => $serr,
-  status => $faf->{Status},                    log => !@{$faf->{log}},
+{ rc => $rv,         stderr => $serr,        status => $faf->{Status},
   filename => $faf->{message}{filename},  uri => $faf->{message}{uri},
   size => $faf->{message}{size}, md5hash => $faf->{message}{md5_hash} },
-{ rc => '',            stderr => '',
-  status => 201,          log => !1,
-  %{$samples{$faf->{message}{uri}}}                                   },
+{ rc => '', stderr => '', status => 201,          
+      %{$samples{$faf->{message}{uri}}}                               },
                                          q|[gain] succeedes once again|;
 $done = $faf->{message}{md5_hash} || $faf->{message}{uri};
 is_deeply [ FAFTS_wait_and_gain $faf ], [ '', '' ], q|tag+c0a5|;

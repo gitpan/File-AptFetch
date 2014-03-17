@@ -1,4 +1,4 @@
-# $Id: two.t 495 2014-02-09 19:52:15Z whynot $
+# $Id: two.t 497 2014-03-17 23:44:36Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.50; our $VERSION = qv q|0.1.3|;
+use version 0.77; our $VERSION = version->declare( v0.1.4 );
 
 use t::TestSuite qw| :temp :mthd :diag |;
 use File::AptFetch;
@@ -47,13 +47,11 @@ my %samples =
   { filename => $fsrb, uri => qq|file:$fsrb|, size => -s $fsrb, 
                 md5hash => q|0e3186ccab6bc750fd707b159875e596| } );
 is_deeply
-{ rc => $rv,                                          stderr => $serr,
-  status => $faf->{Status},                    log => !@{$faf->{log}},
+{ rc => $rv,        stderr => $serr,         status => $faf->{Status},
   filename => $faf->{message}{filename},  uri => $faf->{message}{uri},
   size => $faf->{message}{size}, md5hash => $faf->{message}{md5_hash} },
-{ rc => '',            stderr => '',
-  status => 201,          log => !1,
-  %{$samples{$faf->{message}{uri}}}                                   },
+{ rc => '', stderr => '', status => 201,          
+      %{$samples{$faf->{message}{uri}}}                               },
                                                q|[gain] succeedes once|;
 $done = $faf->{message}{md5_hash} || $faf->{message}{filename};
 ( $rv, $serr ) = FAFTS_wait_and_gain $faf;
@@ -85,13 +83,11 @@ FAFTS_show_message %{$faf->{message}};
   { filename => $fsrb, uri => qq|file:$fsrb|, size => -s $fsrb,
                 md5hash => q|2cdfe7217d54310df2caebcd0df8b124| } );
 is_deeply
-{ rc => $rv,                                          stderr => $serr,
-  status => $faf->{Status},                    log => !@{$faf->{log}},
+{ rc => $rv,         stderr => $serr,        status => $faf->{Status},
   filename => $faf->{message}{filename},  uri => $faf->{message}{uri},
   size => $faf->{message}{size}, md5hash => $faf->{message}{md5_hash} },
-{ rc => '',            stderr => '',
-  status => 201,          log => !1,
-  %{$samples{$faf->{message}{uri}}}                                   },
+{ rc => '', stderr => '', status => 201,          
+      %{$samples{$faf->{message}{uri}}}                               },
                                            q|[gain] succeedes once yet|;
 $done = $faf->{message}{md5_hash};
 ( $rv, $serr ) = FAFTS_wait_and_gain $faf;

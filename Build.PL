@@ -1,10 +1,10 @@
-# $Id: Build.PL 496 2014-02-26 17:39:18Z whynot $
+# $Id: Build.PL 497 2014-03-17 23:44:36Z whynot $
 
 use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.5 );
+use version 0.77; our $VERSION = version->declare( v0.1.6 );
 
 use Module::Build 0.28;
 
@@ -81,36 +81,30 @@ Should be distributed with Perl itself too.
 =cut
 
 my $builder = Module::Build->new(
-  module_name       =>                          q|File::AptFetch|,
-  dynmic_config     =>                                          1,
-  dist_author       =>        q|Eric Pozharski <whynot@cpan.org>|,
-  dist_version_from =>                         q|lib/AptFetch.pm|,
-  sign              =>                                          1,
-  requires          =>
+  module_name          =>                       q|File::AptFetch|,
+  dist_author          =>     q|Eric Pozharski <whynot@cpan.org>|,
+  dist_version_from    =>                      q|lib/AptFetch.pm|,
+  sign                 =>                                       1,
+# TODO:201402091303:whynot: B<Software::License> support has been added to B<M::B> I<0.36_14>, so 20100822, so B<perl> I<5.12.2>, so B<version> I<0.83>
+# FIXME:201403172218:whynot: Nothing to do with B<CPAN::Meta>.  B<Module::Build> insists on backward compatibility.  Thus C<LGPL_3_0> becomes C<lgpl>, what in turn becomes C<LGPL_2_0>.  Unconitionally.
+  license              =>                          q|open_source|,
+  meta_merge           => { resources =>
+  { license =>     q|http://www.gnu.org/licenses/lgpl-3.0.txt| }},
+  requires             =>
   { perl        => qv v5.8.0,
     version     =>  qv v0.77,
     Carp        =>        '',
     Cwd         =>        '',
     q|IO::Pipe| =>        ''                                    },
-  build_requires    =>
+  build_requires       =>
   { q|Test::More| => '',    q|File::Temp| => '',    POSIX => '' },
+  recursive_test_files =>                                       1,
   pm_files =>
-  { q|lib/AptFetch.pm| =>        q|lib/File/AptFetch.pm|,
-    q|lib/Simple.pm|   => q|lib/File/AptFetch/Simple.pm|        },
-  pod_files         =>
+  { q|lib/AptFetch.pm|  =>        q|lib/File/AptFetch.pm|,
+    q|lib/Simple.pm|    => q|lib/File/AptFetch/Simple.pm|       },
+  pod_files            =>
   { q|lib/Cookbook.pod| =>    q|lib/File/AptFetch/Cookbook.pod| },
-  add_to_cleanup    => [qw|                 *.tmp *.bak skip_* |] );
-
-# TODO:201402091303:whynot: B<Software::License> support has been added to B<M::B> I<0.36_14>, so 20100822, so B<perl> I<5.12.2>, so B<version> I<0.83>
-# FIXME:201402250150:whynot: B<CPAN::Meta> does weird stuff.
-if( version->parse( $Module::Build::VERSION ) > qv v0.36 )      {
-    $builder->license( q|LGPL_3_0| );
-    $builder->configure_requires( q|Module::Build| => qv v0.36 ) }
-else                                                            {
-    $builder->license( q|open_source| );
-    $builder->configure_requires( q|Module::Build| => qv v0.28 );
-    $builder->meta_add({ resources =>
-    { license => q|http://www.gnu.org/licenses/lgpl-3.0.txt| }}) }
+  add_to_cleanup       => [qw|              *.tmp *.bak skip_* |] );
 
 =head1 BUILD-TIME CONFIGURATION
 
@@ -118,7 +112,7 @@ else                                                            {
 
 =cut
 
-=item C<lib_method>
+=item I<lib_method>
 
 That sets location of APT methods.
 It's unrequired,
@@ -130,7 +124,7 @@ L<File::AptFetch/_uncache_configuration()> have more.
 
 #$builder->config_data(lib_method    => q|/usr/lib/apt/methods|);
 
-=item C<config_source>
+=item I<config_source>
 
 Required.
 C<ARRAY> ref that will be B<exec>ed.
@@ -140,7 +134,7 @@ L<File::AptFetch/_cache_configuration()> has more.
 
 $builder->config_data( config_source => [qw| /usr/bin/apt-config dump |]);
 
-=item C<signal>
+=item I<signal>
 
 Required.
 Names a signal that will be sent to method.
@@ -150,21 +144,40 @@ L<File::AptFetch/DESTROY> has more.
 
 $builder->config_data( signal => q|TERM| );
 
-=item C<timeout>
+=item I<timeout>
 
-I<(v.0.0.8)>
+=item I<tick>
+
+I<(v0.0.8)>
 Required.
 I've believed, that could stay hardcoded.
 I was wrong.
 L<File::AptFetch/_read()> has more.
+
+I<(v0.1.6)>
+These are closely related.
+From now on,
+I<timeout> keeps the same semantics as before
+(it's time to cut-off)
+but is handled differently.
+B<F::AF> object B<sleep>ed (literally) for time set.
+Now it B<select>s (with magic)in I<tick>s.
+(It's introduced for sake of B<F::AF::S>.)
+
+Also.
+Both must be naturals;
+They're in seconds;
+I<tick> is supposed to be couple of seconds (default: 5sec);
+While I<timeout> is supposed to be large enough (default: 2min) in respect to
+network introduced delays.
 
 =back
 
 =cut
 
 $builder->config_data( timeout => 120 );
+$builder->config_data( tick    =>   5 );
 
-$builder->recursive_test_files( 1 );
 $builder->create_build_script( );
 
 =head1 TEST-SUITE

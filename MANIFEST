@@ -8,15 +8,19 @@ META.json
 META.yml
 README
 t/0.t
+t/0/9raCtd.t
+t/0/EmMn8o.t
 t/copy/0.t
 t/copy/fail.t
 t/copy/one.t
 t/copy/perm.t
+t/copy/slow.t
 t/copy/two.t
 t/file/0.t
 t/file/fail.t
 t/file/one.t
 t/file/two.t
+t/read-callback/default.t
 t/simple/0.t
 t/simple/copy.t
 t/simple/fail.t
@@ -25,6 +29,7 @@ t/void/aptconfig.t
 t/void/configure.t
 t/void/destroy.t
 t/void/handshake.t
+t/void/set_callback.t
 t/w-method
 t/x-method
 t/y-method

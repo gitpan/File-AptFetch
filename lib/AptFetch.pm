@@ -1,4 +1,4 @@
-# $Id: AptFetch.pm 497 2014-03-17 23:44:36Z whynot $
+# $Id: AptFetch.pm 498 2014-04-02 19:19:15Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use warnings;
 use strict;
 
 package File::AptFetch;
-use version 0.77; our $VERSION = version->declare( v0.1.6 );
+use version 0.77; our $VERSION = version->declare( v0.1.7 );
 
 use File::AptFetch::ConfigData;
 use Carp;
@@ -15,7 +15,7 @@ use IO::Pipe;
 
 =head1 NAME
 
-File::AptFetch - perl interface onto APT-Methods.
+File::AptFetch - perl interface onto APT-Methods
 
 =head1 SYNOPSIS
 
@@ -288,6 +288,7 @@ sub init        {
     my $self = { };
     $self->{method} = shift @_          or return q|($method) is unspecified|;
     $self->{log} = [ ];
+    $self->{trace} = { };
     $self->{timeout} = File::AptFetch::ConfigData->config( q|timeout| );
     $self->{tick} = File::AptFetch::ConfigData->config( q|tick| );
     bless $self, $cls;
@@ -362,6 +363,78 @@ sub DESTROY                       {
     close $self->{it} or carp qq|[close] (writer): $!|         if $self->{it};
     waitpid $self->{pid}, 0                                   if $self->{pid};
     delete @$self{qw| pid me it |} }
+
+=item B<set_callback()>
+
+    File::AptFetch::set_callback %callbacks;
+
+(I<v0.1.6>)
+Sets (whatever known) callbacks.
+Semantics and procedures are documented where apropriate.
+Keys of I<%callbacks> are tags
+(subject to hash handling by perl, don't mess);
+key must be among known (or else).
+Values are either
+
+=over
+
+=item *
+
+CODE -- whatever previous value was would be vanished;
+
+=item *
+
+C<undef> -- resets callback to default, if any;
+
+=item *
+
+anything else -- C<croak>.
+
+=back
+
+Known tags are:
+
+=over
+
+=item C<gain>
+
+(I<v0.1.7>) L</B<gain()>> has more.
+
+=item C<read>
+
+L</B<_read()>> has more.
+
+=back
+
+Diagnostics provided:
+
+=over
+
+=item (%s): candiate to pass in neither CODE nor (undef)
+
+Tag C<%s> (may be unknown) tries to set something for callback.
+That must be either CODE or C<undef>.
+It's not.
+
+=item (%s): unknown callback
+
+Tag C<%s> is unknown.
+Nothing to do with it but B<croak>.
+
+=back
+
+=cut
+
+my( $_gain_callback, $_read_callback );
+sub set_callback ( % )                                                 {
+    my %callbacks = @_;
+    while( my( $tag, $code ) = each %callbacks )                      {
+        ref $code eq q|CODE| || !defined $code                        or croak
+          qq|($tag): candidate to pass in is neither CODE nor (undef)|;
+        if( $tag eq q|read| && $code ) {      $_read_callback = $code }
+        elsif( $tag eq q|read| ) { $_read_callback = \&_read_callback }
+        elsif( $tag eq q|gain| ) {            $_gain_callback = $code }
+        else                     { croak qq|($tag): unknown callback| }}}
 
 =item B<request()>
 
@@ -442,10 +515,11 @@ sub request {
     while( my( $filename, $source ) = each %request ) {
         my $uri = ref $source ? $source->{uri} : $source;
         $uri   or return qq|($self->{method}): ($filename): URI is undefined|;
-        $self->{trace}{$filename} = { filename => $filename };
+        $uri = qq|$self->{method}:$uri|;
+        $self->{trace}{$uri} = { filename => $filename };
         $log .= <<"END_OF_LOG"                         }
 600 URI Acquire
-URI: $self->{method}:$uri
+URI: $uri
 Filename: $filename
 
 END_OF_LOG
@@ -491,9 +565,15 @@ The possible cause would be you've run out of requests
 
 L</_parse_status_code()> and L</_parse_message()> can emit their own messages.
 
+Unless any problems just before B<return> C<gain> callback is tried (if any).
+That CODE is given the object as an argument.
+There's no default callback.
+RV is ignored;
+B<(note)> That might change in future, beter return TRUE.
+
 =cut
 
-sub gain                                              {
+sub gain {
     my $self = shift @_;
 
     unless( @{$self->{log}} )                                          {
@@ -504,56 +584,9 @@ sub gain                                              {
           qq|($self->{method}): timeouted without responce|;
         $self->{ALRM_error} and return qq|($self->{method}): timeouted| }
 
-    $self->_parse_status_code || $self->_parse_message }
-
-=item B<set_callback()>
-
-    File::AptFetch::set_callback %callbacks;
-
-Sets (whatever known) callbacks.
-Semantics and procedures are documented where apropriate.
-Keys of I<%callbacks> are tags
-(subject to hash handling by perl, don't mess);
-key must be among known (or else).
-Values are CODEs (or else);
-whatever previous value was would be vanished.
-Known tags are:
-
-=over
-
-=item C<read>
-
-L</_read()> has more.
-
-=back
-
-Diagnostics provided:
-
-=over
-
-=item (%s): candiate to pass in isn't CODE
-
-Tag C<%s> (may be unknown) tries to set something for callback.
-That must be CODE.
-It's not.
-
-=item (%s): unknown callback
-
-Tag C<%s> is unknown.
-Nothing to with it but B<croak>.
-
-=back
-
-=cut
-
-my $_read_callback;
-sub set_callback ( % )                                              {
-    my %callbacks = @_;
-    while( my( $tag, $code ) = each %callbacks )                   {
-        ref $code eq q|CODE|                                          or croak
-          qq|($tag): candidate to pass in isn't CODE|;
-        if( $tag eq q|read| ) {            $_read_callback = $code }
-        else                  { croak qq|($tag): unknown callback| }}}
+    my $rv = $self->_parse_status_code || $self->_parse_message;
+    $_gain_callback->( $self )      if ref $_gain_callback eq q|CODE| && !$rv;
+      $rv }
 
 =item B<_parse_status_code()>
 
@@ -939,8 +972,6 @@ goes for next I<$tick> long B<select>.
 I<(not implemented)>
 If any callback returns C<undef> then fails entirely.
 
-=item +
-
 =back
 
 =back
@@ -965,8 +996,6 @@ sub _read {
     my $self = shift;
 
     $self->{ALRM_error} = 0;
-# TODO:201403151935:whynot: There's B<set_callback()>.  Time to move it outside.
-    $_read_callback = \&_read_callback         unless defined $_read_callback;
     my $timeout = $self->{timeout};
     while( 1 )                                                     {
         my @line;
@@ -1063,6 +1092,8 @@ sub _read_callback   {
         $st->{factor} = 1                                if 1 > $st->{factor};
         $st->{flag} = 5 * $st->{factor} if $st->{size} - $st->{back} }
     0 < $st->{flag}-- }
+
+set_callback read => \&_read_callback;
 
 =back
 

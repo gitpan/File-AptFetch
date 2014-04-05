@@ -1,10 +1,10 @@
-# $Id: Build.PL 497 2014-03-17 23:44:36Z whynot $
+# $Id: Build.PL 498 2014-04-02 19:19:15Z whynot $
 
 use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.6 );
+use version 0.77; our $VERSION = version->declare( v0.1.7 );
 
 use Module::Build 0.28;
 
@@ -92,7 +92,11 @@ my $builder = Module::Build->new(
   { license =>     q|http://www.gnu.org/licenses/lgpl-3.0.txt| }},
   requires             =>
   { perl        => qv v5.8.0,
+# FIXME:201404020142:whynot: How?
+# http://www.cpantesters.org/cpan/report/4343e344-af71-11e3-b3f2-e50c8806f0e4
     version     =>  qv v0.77,
+# FIXME:201404020128:whynot: Go B<parent> as soon as B<perl> >= C<v5.10.1>
+    base        =>        '',
     Carp        =>        '',
     Cwd         =>        '',
     q|IO::Pipe| =>        ''                                    },

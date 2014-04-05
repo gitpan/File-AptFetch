@@ -1,4 +1,4 @@
-# $Id: copy.t 496 2014-02-26 17:39:18Z whynot $
+# $Id: copy.t 498 2014-04-02 19:19:15Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,13 +7,14 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.1 );
+use version 0.77; our $VERSION = version->declare( v0.1.2 );
 
 use t::TestSuite qw| :mthd :temp :file |;
 use File::AptFetch::Simple;
 use Test::More;
 
 File::AptFetch::ConfigData->set_config( timeout => 10 );
+File::AptFetch::ConfigData->set_config( tick    =>  1 );
 
 my $Apt_Lib = t::TestSuite::FAFTS_discover_lib;
 plan
@@ -39,7 +40,7 @@ $dirb = FAFTS_tempdir nick => q|dtagbb1b|;
 
 ( $fafs, $serr ) = FAFTS_wrap { File::AptFetch::Simple->request( q|copy| ) };
 isa_ok $fafs, q|File::AptFetch::Simple|, q|sCM|;
-ok !$serr, q|tag+4456 {STDERR} is empty|;
+is $serr, '', q|tag+4456 {STDERR} is empty|;
 $tmpl =
 { rv => qq|$fafs|, stderr => '', status => 201, log => [ ], mark => 0 };
 
@@ -48,22 +49,21 @@ $fsra = FAFTS_tempfile
 push @purg, $ftga = ( split m{/}, $fsra )[-1];
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request({ }, $fsra ) };
 is_deeply
-{ rv => qq|$rv|, stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log},                mark => $fafs->{mark},
-                               file => FAFTS_get_file $ftga },
-{ %$tmpl,                      file => FAFTS_get_file $fsra },
-                                         q|tag+6421 one file|;
+{ rv => qq|$rv|,  stderr => $serr, status => $fafs->{Status},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
+                                file => FAFTS_get_file $ftga },
+{ %$tmpl, file => FAFTS_get_file $fsra }, q|tag+6421 one file|;
 
 $fsra = FAFTS_tempfile
   nick => q|ftagb1f5|, dir => $dira, content => q|tag+7dac|;
 push @purg, $ftga = ( split m{/}, $fsra )[-1];
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request( $fsra ) };
 is_deeply
-{ rv => qq|$rv|, stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log},                mark => $fafs->{mark},
-                               file => FAFTS_get_file $ftga },
-{ %$tmpl,                      file => FAFTS_get_file $fsra },
-                                    q|tag+6e08 no {%options}|;
+{ rv => qq|$rv|, stderr => $serr,  status => $fafs->{Status},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
+                                file => FAFTS_get_file $ftga },
+{ %$tmpl,                       file => FAFTS_get_file $fsra },
+                                     q|tag+6e08 no {%options}|;
 
 $fsra = FAFTS_tempfile
   nick => q|ftag1e3b|, dir => $dira, content => q|tag+a24c|;
@@ -74,7 +74,7 @@ push @purg,
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request({ }, $fsra, $fsrb ) };
 is_deeply
 { rv => qq|$rv|,  stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log},                 mark => $fafs->{mark},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
   fila => FAFTS_get_file $ftga, filb => FAFTS_get_file $ftgb         },
 { %$tmpl, fila => FAFTS_get_file $fsra, filb => FAFTS_get_file $fsrb },
                                                  q|tag+b672 two files|;
@@ -88,7 +88,7 @@ push @purg,
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request( $fsra, $fsrb ) };
 is_deeply
 { rv => qq|$rv|, stderr => $serr,  status => $fafs->{Status},
-  log => $fafs->{log},                 mark => $fafs->{mark},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
   fila => FAFTS_get_file $ftga, filb => FAFTS_get_file $ftgb         },
 { %$tmpl, fila => FAFTS_get_file $fsra, filb => FAFTS_get_file $fsrb },
                                              q|tag+1b24 no {%options}|;
@@ -102,7 +102,7 @@ push @purg,
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request({ }, $fsra, $fsrb ) };
 is_deeply
 { rv => qq|$rv|,  stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log},                 mark => $fafs->{mark},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
   fila => FAFTS_get_file $ftga, filb => FAFTS_get_file $ftgb         },
 { %$tmpl, fila => FAFTS_get_file $fsra, filb => FAFTS_get_file $fsrb },
                                      q|tag+d1e5 two files in two dirs|;
@@ -112,17 +112,17 @@ $fsra = FAFTS_tempfile
 $ftga = sprintf q|%s/%s|, $dirb, ( split m{/}, $fsra )[-1];
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request({ location => $dirb }, $fsra ) };
 is_deeply
-{ rv => qq|$rv|, stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log},                mark => $fafs->{mark},
-                               file => FAFTS_get_file $ftga },
-{ %$tmpl,                      file => FAFTS_get_file $fsra },
-                   q|tag+be17 overriding default {$location}|;
+{ rv => qq|$rv|,  stderr => $serr, status => $fafs->{Status},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
+                                file => FAFTS_get_file $ftga },
+{ %$tmpl,                       file => FAFTS_get_file $fsra },
+                    q|tag+be17 overriding default {$location}|;
 
 $dirc = FAFTS_tempdir nick => q|dtag81e3|;
 ( $fafs, $serr ) = FAFTS_wrap                                              {
   File::AptFetch::Simple->request({ method => q|copy|, location => $dirc }) };
 isa_ok $fafs, q|File::AptFetch::Simple|, q|cCM {$location}|;
-ok !$serr, q|tag+6f56 {STDERR} is empty|;
+is $serr, '', q|tag+6f56 {STDERR} is empty|;
 $tmpl->{rv} = qq|$fafs|;
 
 $fsra = FAFTS_tempfile
@@ -130,22 +130,21 @@ $fsra = FAFTS_tempfile
 $ftga = sprintf q|%s/%s|, $dirc, ( split m{/}, $fsra )[-1];
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request({ }, $fsra ) };
 is_deeply
-{ rv => qq|$rv|, stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log},                mark => $fafs->{mark},
-                               file => FAFTS_get_file $ftga },
-{ %$tmpl,                      file => FAFTS_get_file $fsra },
-                                         q|tag+38c4 one file|;
+{ rv => qq|$rv|, stderr => $serr,  status => $fafs->{Status},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
+                                file => FAFTS_get_file $ftga },
+{ %$tmpl, file => FAFTS_get_file $fsra }, q|tag+38c4 one file|;
 
 $fsra = FAFTS_tempfile
   nick => q|ftagf512|, dir => $dira, content => q|tag+6b3f|;
 $ftga = sprintf q|%s/%s|, $dirc, ( split m{/}, $fsra )[-1];
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request( $fsra ) };
 is_deeply
-{ rv => qq|$rv|, stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log},                mark => $fafs->{mark},
-                               file => FAFTS_get_file $ftga },
-{ %$tmpl,                      file => FAFTS_get_file $fsra },
-                                    q|tag+e6f7 no {%options}|;
+{ rv => qq|$rv|,  stderr => $serr, status => $fafs->{Status},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
+                                file => FAFTS_get_file $ftga },
+{ %$tmpl,                       file => FAFTS_get_file $fsra },
+                                     q|tag+e6f7 no {%options}|;
 
 $fsra = FAFTS_tempfile
   nick => q|ftagaba8|, dir => $dira, content => q|tag+f101|;
@@ -156,7 +155,7 @@ $ftgb = sprintf q|%s/%s|, $dirc, ( split m{/}, $fsrb )[-1];
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request({ }, $fsra, $fsrb ) };
 is_deeply
 { rv => qq|$rv|, stderr => $serr,  status => $fafs->{Status},
-  log => $fafs->{log},                 mark => $fafs->{mark},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
   fila => FAFTS_get_file $ftga, filb => FAFTS_get_file $ftgb         },
 { %$tmpl, fila => FAFTS_get_file $fsra, filb => FAFTS_get_file $fsrb },
                                                  q|tag+4b89 two files|;
@@ -170,7 +169,7 @@ $ftgb = sprintf q|%s/%s|, $dirc, ( split m{/}, $fsrb )[-1];
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request({ }, $fsra, $fsrb ) };
 is_deeply
 { rv => qq|$rv|,  stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log},                 mark => $fafs->{mark},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
   fila => FAFTS_get_file $ftga, filb => FAFTS_get_file $ftgb         },
 { %$tmpl, fila => FAFTS_get_file $fsra, filb => FAFTS_get_file $fsrb },
                                      q|tag+08e5 two files in two dirs|;
@@ -180,33 +179,33 @@ $fsra = FAFTS_tempfile
 $ftga = sprintf q|%s/%s|, $dirb, ( split m{/}, $fsra )[-1];
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request({ location => $dirb }, $fsra ) };
 is_deeply
-{ rv => qq|$rv|, stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log},                mark => $fafs->{mark},
-                               file => FAFTS_get_file $ftga },
-{ %$tmpl,                      file => FAFTS_get_file $fsra },
-                   q|tag+3c2d overriding default {$location}|;
+{ rv => qq|$rv|, stderr => $serr,  status => $fafs->{Status},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
+                                file => FAFTS_get_file $ftga },
+{ %$tmpl,                       file => FAFTS_get_file $fsra },
+                    q|tag+3c2d overriding default {$location}|;
 
 $fsra = FAFTS_tempfile
   nick => q|ftagd231|, dir => $dira, content => q|tag+e09e|;
 push @purg, $ftga = ( split m{/}, $fsra )[-1];
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request({ location => q|.| }, $fsra ) };
 is_deeply
-{ rv => qq|$rv|, stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log},                mark => $fafs->{mark},
-                               file => FAFTS_get_file $ftga },
-{ %$tmpl,                      file => FAFTS_get_file $fsra },
-                   q|tag+0cbc overriding default {$location}|;
+{ rv => qq|$rv|,  stderr => $serr, status => $fafs->{Status},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
+                                file => FAFTS_get_file $ftga },
+{ %$tmpl,                       file => FAFTS_get_file $fsra },
+                    q|tag+0cbc overriding default {$location}|;
 
 $fsra = FAFTS_tempfile
   nick => q|ftagf838|, dir => $dirc, content => q|tag+5c90|;
 $ftga = sprintf q|%s/%s|, $dira, ( split m{/}, $fsra )[-1];
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request({ location => $dira }, $fsra ) };
 is_deeply
-{ rv => qq|$rv|, stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log},                mark => $fafs->{mark},
-                               file => FAFTS_get_file $ftga },
-{ %$tmpl,                      file => FAFTS_get_file $fsra },
-                   q|tag+9446 overriding default {$location}|;
+{ rv => qq|$rv|,  stderr => $serr, status => $fafs->{Status},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
+                                file => FAFTS_get_file $ftga },
+{ %$tmpl,                       file => FAFTS_get_file $fsra },
+                    q|tag+9446 overriding default {$location}|;
 
 $dirc = substr $dirb, 1;
 $dirc =~ s{[^/]+/}{}                                           until -d $dirc;
@@ -218,11 +217,11 @@ delete $tmpl->{rv};
     File::AptFetch::Simple->request(
       { method => q|copy|, location => $dirc }, $fsra ) };
 is_deeply
-{ stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log}, mark => $fafs->{mark},
-                file => FAFTS_get_file $ftga },
-{ %$tmpl,       file => FAFTS_get_file $fsra },
-             q|cCM {$location} isn't absolute|;
+{ stderr => $serr,                 status => $fafs->{Status},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
+                                file => FAFTS_get_file $ftga },
+{ %$tmpl,                       file => FAFTS_get_file $fsra },
+                             q|cCM {$location} isn't absolute|;
 $tmpl->{rv} = qq|$fafs|;
 
 $dirc = substr $dirb = FAFTS_tempdir( nick => q|dtag89f5| ), 1;
@@ -232,15 +231,15 @@ $fsra = FAFTS_tempfile
 $ftga = sprintf q|%s/%s|, $dirb, ( split m{/}, $fsra )[-1];
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request({ location => $dirc }, $fsra ) };
 is_deeply
-{ rv => qq|$rv|, stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log},                mark => $fafs->{mark},
-                               file => FAFTS_get_file $ftga },
-{ %$tmpl,                      file => FAFTS_get_file $fsra },
-                            q|cUM {$location} isn't absolute|;
+{ rv => qq|$rv|, stderr => $serr,  status => $fafs->{Status},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
+                                file => FAFTS_get_file $ftga },
+{ %$tmpl,                       file => FAFTS_get_file $fsra },
+                             q|cUM {$location} isn't absolute|;
 
 ( $fafs, $serr ) = FAFTS_wrap { File::AptFetch::Simple->request( q|file| ) };
 isa_ok $fafs, q|File::AptFetch::Simple|, q|sCM {$method} (file)|;
-ok !$serr, q|tag+6751 {STDERR} is empty|;
+is $serr, '', q|tag+6751 {STDERR} is empty|;
 $tmpl->{rv} = qq|$fafs|;
 
 $fsra = FAFTS_tempfile
@@ -248,10 +247,9 @@ $fsra = FAFTS_tempfile
 push @purg, $ftga = ( split m{/}, $fsra )[-1];
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request( $fsra ) };
 is_deeply
-{ rv => qq|$rv|, stderr => $serr, status => $fafs->{Status},
-  log => $fafs->{log},                mark => $fafs->{mark},
-                               file => FAFTS_get_file $ftga },
-{ %$tmpl,                      file => FAFTS_get_file $fsra },
-                                          q|[file] is [copy]|;
+{ rv => qq|$rv|,  stderr => $serr, status => $fafs->{Status},
+  log => $fafs->{log}, mark => scalar keys %{$fafs->{trace}},
+                                file => FAFTS_get_file $ftga },
+{ %$tmpl, file => FAFTS_get_file $fsra },  q|[file] is [copy]|;
 
 # vim: syntax=perl

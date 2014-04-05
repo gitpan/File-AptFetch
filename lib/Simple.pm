@@ -1,4 +1,4 @@
-# $Id: Simple.pm 496 2014-02-26 17:39:18Z whynot $
+# $Id: Simple.pm 498 2014-04-02 19:19:15Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package File::AptFetch::Simple;
-use version 0.77; our $VERSION = version->declare( v0.1.1 );
+use version 0.77; our $VERSION = version->declare( v0.1.2 );
 use base qw| File::AptFetch |;
 
 use Carp;
@@ -15,7 +15,7 @@ use Cwd qw| abs_path |;
 
 =head1 NAME
 
-File::AptFetch::Simple - simplifing wrapper above F::AF
+File::AptFetch::Simple - convenience wrapper over File::AptFetch
 
 =head1 SYNOPSIS
 
@@ -23,11 +23,29 @@ File::AptFetch::Simple - simplifing wrapper above F::AF
 
 =head1 DESCRIPTION
 
-# TODO:
+When B<File::AptFetch> was started it was believed that it must be bare-bone
+simple.
+Then RL came (refer to I<v0.0.8> for details).
+Besides B<F::AF> needed loads of handling on user's side of code.
+Thus B<File::AptFetch::Simple> was born.
+
+The sole purpose of B<F::AF::S> is to reach unimaginable simplicity to limits
+of being usable in one-liner (and beyond).
+To further convinience there's only one method what is also a constructor.
+That combine has name L</B<request()>>.
+Just like in parent class.
+Only --
+it won't B<return> unless all transfers are finished;
+and it B<returns> object;
+and it B<croak>s on errors.
+
+Enjoy.
 
 =head1 API
 
 =over
+
+=cut
 
 =item B<request()>
 
@@ -35,6 +53,11 @@ Has two modes:  constructor and utility.
 In either case a F::AF::S B<bless>ed object is returned.
 Unless B<base> B<F::AF> object reported any problem,
 then B<croak>s.
+However, if that's a condition the parent doesn't care about
+(as a matter of fact, B<F::AF> doesn't care that much about consistency of
+messages and such)
+but it looks terrible (and probably would lead to eventual timeout)
+such conditions are B<carp>ed.
 
 =over
 
@@ -99,6 +122,9 @@ then those B<request()>s will put results in two different dirctories.
 B<(bug)>
 Neither checks nor makes sure I<$options{location}> is anyway usable.
 
+B<(bug)>
+Passively resists setting to value C<0>.
+
 =item I<$options{method}>
 
 =item I<$method>
@@ -138,8 +164,65 @@ current value of I<$options{location}> will be concatenated with a basename of
 currently processed I<$uris[]>.
 The separator is slash.
 (What else, it's *nix, for kernel's sake.)
-(B<(bug)>
+B<(bug)>
 As a matter of fact there's no way it can be anyhow affected.
+
+=back
+
+Diagnostics
+(fatal conditions are specially marked)
+(all errors that come from the parent are fatal by definition,
+refer for B<F::AF> for details):
+
+=over
+
+=item {$options{method}} is required
+
+B<(fatal)> B<(cCM)>
+There's I<%options> HASH in I<@_>.
+Unfortunately I<method> is FALSE.
+No way to proceede with this.
+B<(caveat)>
+That hopes that there won't be a method named C<0>.
+BTW parent will B<croak> on C<0> anyway.
+
+=item either {$method} of {%options} is required
+
+B<(fatal)> B<([cs]CM)>
+During construction a method has to be initialized
+what means it has to be picked up.
+Invoking code must provide a method's name;
+It didn't.
+As a matter of fact I<@_> is totally empty.
+
+=item first must be either {$method} of {%options}
+
+B<(fatal)> B<([cs]CM)>
+In this case I<@_> isn't empty,
+but its leader is neither scalar ({$method}) nor HASH ({%options}).
+Initialization code has no way to handle this.
+
+=item got (%s) for (%s) without [request]
+
+B<([cs]UM)>
+Something wrong.
+A message came in about I<$uri> (the latter C<%s>)
+(it has I<$status> (the former C<%s>)).
+It's surprise,
+that I<$uri> was never requested.
+B<(bug)>
+Should dump the message.
+
+=item got (%s) without {URI:}
+
+B<([cs]UM)>
+Something wrong.
+A message just came in and it has no I<$uri>
+(it has I<$status> (C<%s>)).
+It's surprise,
+I've never seen messages without that identification.
+B<(bug)>
+Should dump the damn message.
 
 =back
 
@@ -165,6 +248,7 @@ sub request {
             unshift @subj, $args; $args = { } }
         elsif( !$args )                      {
             $args = { }                       }            }
+# FIXME:201404012258:whynot: Must handle F<0> specially.
     my $loc = abs_path $args->{location} || $self->{location} || '.';
     my $rv = $self->SUPER::request( map  {
         my $src = $_;
@@ -172,12 +256,21 @@ sub request {
         my $bnam = ( split m{/} )[-1];
         qq|$loc/$bnam| => { uri => $src } } @subj );
     $rv                                                         and croak $rv;
-    $self->{mark} += @subj;
-    while( $self->{mark} )         {
-        my $rv = $self->SUPER::gain;
+    while( %{$self->{trace}} )                                      {
+        $rv = $self->SUPER::gain;
         $rv                                                     and croak $rv;
-        $self->{mark}--                         if grep $self->{Status} == $_,
-          qw| 201 400 401 402 403 | }
+        if( grep $self->{Status} == $_, qw| 201 400 401 402 403 |) {
+            my $fn = $self->{message}{uri};
+            unless( $fn                 )                                 {
+# TODO:201403302300:whynot: Not in test-suite.
+# TODO:201403302300:whynot: Additional diagnostics is missing.
+                carp qq|got ($self->{status}) without {URI:}|;        next }
+            elsif( !$self->{trace}{$fn} )                                 {
+# TODO:201403221929:whynot: Not in test-suite.
+                carp qq|got ($self->{status}) for ($fn) without [request]| }
+            else                                                          {
+                print qq|($fn): ($self->{status})\n|                       }
+            delete $self->{trace}{$fn}                              }}
        $self }
 
 =back

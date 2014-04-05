@@ -1,4 +1,4 @@
-# $Id: fail.t 496 2014-02-26 17:39:18Z whynot $
+# $Id: fail.t 498 2014-04-02 19:19:15Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,13 +7,14 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.1 );
+use version 0.77; our $VERSION = version->declare( v0.1.2 );
 
 use t::TestSuite qw| :mthd :temp |;
 use File::AptFetch::Simple;
 use Test::More;
 
 File::AptFetch::ConfigData->set_config( timeout => 10 );
+File::AptFetch::ConfigData->set_config( tick    =>  1 );
 
 my $Apt_Lib = t::TestSuite::FAFTS_discover_lib;
 plan
@@ -27,35 +28,34 @@ my( $fafs, $rv, $serr );
 
 ( $fafs, $serr ) = FAFTS_wrap { File::AptFetch::Simple->request( ) };
 like $fafs, qr{either ..method. or .%options. is required}, q|no args|;
-ok !$serr, q|tag+32da {STDERR} is empty|;
+is $serr, '', q|tag+32da {STDERR} is empty|;
 
 ( $fafs, $serr ) = FAFTS_wrap { File::AptFetch::Simple->request( undef ) };
 like $fafs, qr{either ..method. or .%options. is required},
   q|explicit (undef)|;
-ok !$serr, q|tag+ea6e {STDERR} is empty|;
+is $serr, '', q|tag+ea6e {STDERR} is empty|;
 
 ( $fafs, $serr ) = FAFTS_wrap { File::AptFetch::Simple->request({ }) };
 like $fafs, qr{..options.method.. is required}, q|no {$options{method}}|;
-ok !$serr, q|tag+111b {STDERR} is empty|;
+is $serr, '', q|tag+111b {STDERR} is empty|;
 
 ( $fafs, $serr ) = FAFTS_wrap                           {
   File::AptFetch::Simple->request([ method => q|copy| ]) };
 like $fafs, qr{first must be either ..method. or .%options.}, q|ARRAY|;
-ok !$serr, q|tag+002c {STDERR} is empty|;
+is $serr, '', q|tag+002c {STDERR} is empty|;
 
 $dir = FAFTS_tempdir nick => q|dtag4c14|;
 $fsrc = FAFTS_tempfile
-  nick => q|ftag2e98|, dir => $dir, content => q|tag+0fd5|;
-unlink $fsrc;
+  nick => q|ftag2e98|, dir => $dir, content => q|tag+0fd5|, unlink => !0;
 $ftrg = ( split m{/}, $fsrc )[-1];
 ( $fafs, $serr ) = FAFTS_wrap {
   File::AptFetch::Simple->request( copy => $fsrc ) };
 isa_ok $fafs, q|File::AptFetch::Simple|, q|requesting missing|;
 is_deeply
-{ stderr => $serr,                    status => $fafs->{Status},
-  log => $fafs->{log}, mark => $fafs->{mark}, file => !-f $ftrg },
-{ stderr => '',       status => 400,
-  log => [ ], mark => 0, file => !0                             },
-                                            q|missing is missing|;
+{ stderr => $serr, status => $fafs->{Status}, log => $fafs->{log},
+  mark => scalar keys %{$fafs->{trace}},        file => !-f $ftrg },
+{ stderr => '', status => 400, log => [ ],
+  mark => 0,                   file => !0                         },
+                                              q|missing is missing|;
 
 # vim: syntax=perl

@@ -1,4 +1,4 @@
-# $Id: perm.t 497 2014-03-17 23:44:36Z whynot $
+# $Id: perm.t 498 2014-04-02 19:19:15Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,44 +7,45 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.4 );
+use version 0.77; our $VERSION = version->declare( v0.1.5 );
 
 use t::TestSuite qw| :temp :mthd :diag |;
 use File::AptFetch;
 use Test::More;
 
 File::AptFetch::ConfigData->set_config( timeout => 10 );
+File::AptFetch::ConfigData->set_config( tick    =>  1 );
 
 my( $dira, $dirb, $fsrc, $ftrg );
 my( $fafc, $faff, $rv, $serr, $msga, $msgb );
 my $Copy_Has_Md5hash = 1;
 my $Apt_Lib = t::TestSuite::FAFTS_discover_lib;
 plan
-  !defined $Apt_Lib     ? ( skip_all => q|not *nix, or misconfigured| ) :
-  !$Apt_Lib             ? ( skip_all =>       q|not Debian, or alike| ) :
-  !-x qq|$Apt_Lib/copy| ? ( skip_all =>     q|missing method [copy:]| ) :
-                          ( tests    =>                            47 );
+  !defined $Apt_Lib ? ( skip_all => q|not *nix, or misconfigured| ) :
+  !$Apt_Lib           ?     ( skip_all => q|not Debian, or alike| ) :
+  !-x qq|$Apt_Lib/copy| ? ( skip_all => q|missing method [copy:]| ) :
+                                                    ( tests => 47 );
 
 $dira = FAFTS_tempdir nick => q|dtag2c95|;
 $dirb = FAFTS_tempdir nick => q|dtag85df|;
 my $umask = umask 0072;
 ( $fafc, $serr ) = FAFTS_wrap { File::AptFetch->init( q|copy| ) };
 umask $umask;
-ok !$serr, q|tag+300f {STDERR} is empty|;
+is $serr, '', q|tag+300f {STDERR} is empty|;
 ( $faff, $serr ) = FAFTS_wrap { File::AptFetch->init( q|file| ) };
-ok !$serr, q|tag+47ff {STDERR} is empty|;
+is $serr, '', q|tag+47ff {STDERR} is empty|;
 
 $fsrc = FAFTS_tempfile
   nick => q|mtagd376|, dir => $dira, content => q|copy perm alpha|;
 chmod 0764, $fsrc;
 $ftrg = FAFTS_tempfile nick => q|mtag17cb|, dir => $dira;
 chmod 0777, $ftrg;
-is_deeply [ FAFTS_wrap { $faff->request( $fsrc, $fsrc ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $faff->request( $fsrc, $fsrc ) } ], [ '', '', '' ],
   q|tag+db1d|;
 is_deeply [ FAFTS_wait_and_gain $faff ], [ '', '' ], q|tag+c82a|;
 $msgb = $faff->{message};
 FAFTS_show_message %$msgb;
-is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '', '' ],
   q|tag+5a1c|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 $msga = $fafc->{message};
@@ -68,7 +69,7 @@ is_deeply
   size => $msgb->{size}, md5hash => $Copy_Has_Md5hash && $msgb->{md5_hash} },
                                                     q|[gain] succeedes then|;
 is -s $ftrg, $msgb->{size}, q|have size|;
-is_deeply [ FAFTS_wrap { $faff->request( $ftrg, $ftrg ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $faff->request( $ftrg, $ftrg ) } ], [ '', '', '' ],
   q|tag+ad7b|;
 is_deeply [ FAFTS_wait_and_gain $faff ], [ '', '' ], q|tag+f325|;
 FAFTS_show_message %{$faff->{message}};
@@ -85,9 +86,8 @@ TODO:                                                 {
 $fsrc = FAFTS_tempfile
   nick => q|ftagf06e|, dir => $dira, content => q|copy perm bravo|;
 chmod 0000, $fsrc;
-$ftrg = FAFTS_tempfile nick => q|ftagb7b3|, dir => $dirb;
-unlink $ftrg;
-is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
+$ftrg = FAFTS_tempfile nick => q|ftagb7b3|, dir => $dirb, unlink => !0;
+is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '', '' ],
   q|tag+0cff|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
@@ -118,7 +118,7 @@ $fsrc = FAFTS_tempfile
   nick => q|ftage5d5|, dir => $dira, content => q|copy perm charlie|;
 $ftrg = FAFTS_tempfile nick => q|ftag1751|, dir => $dirb;
 chmod 0000, $ftrg;
-is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '', '' ],
   q|tag+799a|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
@@ -146,12 +146,12 @@ TODO:                                                                 {
 $fsrc = FAFTS_tempfile
   nick => q|ftag7722|, dir => $dira, content => q|copy perm delta|;
 $ftrg = FAFTS_tempfile nick => q|ftag911a|, dir => $dirb;
-is_deeply [ FAFTS_wrap { $faff->request( $fsrc, $fsrc ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $faff->request( $fsrc, $fsrc ) } ], [ '', '', '' ],
   q|tag+c344|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $faff;
 FAFTS_show_message %{$faff->{message}};
 chmod 0333, $dira;
-is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '', '' ],
   q|tag+f9bf|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
@@ -179,10 +179,9 @@ is_deeply
 
 $fsrc = FAFTS_tempfile
   nick => q|ftagd960|, dir => $dira, content => q|copy perm echo|;
-$ftrg = FAFTS_tempfile nick => q|ftagb7fd|, dir => $dirb;
-unlink $ftrg;
+$ftrg = FAFTS_tempfile nick => q|ftagb7fd|, dir => $dirb, unlink => !0;
 chmod 0555, $dirb;
-is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '', '' ],
   q|tag+a60|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
@@ -207,12 +206,12 @@ is_deeply
 $fsrc = FAFTS_tempfile
   nick => q|ftag683c|, dir => $dira, content => q|copy perm foxtrot|;
 $ftrg = FAFTS_tempfile nick => q|ftag41bd|, dir => $dirb;
-is_deeply [ FAFTS_wrap { $faff->request( $fsrc, $fsrc ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $faff->request( $fsrc, $fsrc ) } ], [ '', '', '' ],
   q|tag+1caf|;
 is_deeply [ FAFTS_wait_and_gain $faff ], [ '', '' ], q|tag+5e15|;
 FAFTS_show_message %{$faff->{message}};
 chmod 0555, $dirb;
-is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '', '' ],
   q|tag+7ec0|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
@@ -242,7 +241,7 @@ $fsrc = FAFTS_tempfile
   nick => q|ftagd347|, dir => $dira, content => q|copy perm gala|;
 $ftrg = FAFTS_tempfile nick => q|ftag8b17|, dir => $dirb;
 chmod 0666, $dira;
-is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '', '' ],
   q|tag+cae0|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
@@ -258,10 +257,9 @@ chmod 0755, $dira;
 
 $fsrc = FAFTS_tempfile
   nick => q|ftag1824|, dir => $dira, content => q|copy perm hotel|;
-$ftrg = FAFTS_tempfile nick => q|ftag62bc|, dir => $dirb;
-unlink $ftrg;
+$ftrg = FAFTS_tempfile nick => q|ftag62bc|, dir => $dirb, unlink => !0;
 chmod 0666, $dirb;
-is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '', '' ],
   q|tag+e6fa|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};
@@ -287,7 +285,7 @@ $fsrc = FAFTS_tempfile
   nick => q|ftagee89|, dir => $dira, content => q|copy perm india|;
 $ftrg = FAFTS_tempfile nick => q|ftag0350|, dir => $dirb;
 chmod 0666, $dirb;
-is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $fafc->request( $ftrg, $fsrc ) } ], [ '', '', '' ],
   q|tag+8cef|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $fafc;
 FAFTS_show_message %{$fafc->{message}};

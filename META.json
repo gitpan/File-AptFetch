@@ -1,5 +1,5 @@
 {
-   "abstract" : "perl interface onto APT-Methods.",
+   "abstract" : "perl interface onto APT-Methods",
    "author" : [
       "Eric Pozharski <whynot@cpan.org>"
    ],
@@ -35,11 +35,11 @@
    "provides" : {
       "File::AptFetch" : {
          "file" : "lib/AptFetch.pm",
-         "version" : "v0.1.6"
+         "version" : "v0.1.7"
       },
       "File::AptFetch::Simple" : {
          "file" : "lib/Simple.pm",
-         "version" : "v0.1.1"
+         "version" : "v0.1.2"
       }
    },
    "release_status" : "stable",
@@ -48,5 +48,5 @@
          "http://www.gnu.org/licenses/lgpl-3.0.txt"
       ]
    },
-   "version" : "v0.1.6"
+   "version" : "v0.1.7"
 }

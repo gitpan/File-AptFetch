@@ -1,3 +1,15 @@
+  v0.1.7 20140403
+
+      *   Introducing *gain* callback (preparing place for F::AF::S to
+          move in).
+
+      *   *$uri* identifies transfer, but *$filename*.
+
+      *   Attempt to fix nix-but-linux FTBFSes (totally my fault).
+
+      *   Attempt to prevent losing diagnostics around non-empty
+          *STDERR* (just in case).
+
   v0.1.6 20140318
 
       *   Transfer-is-in-progress check is moved to callback.  What

@@ -1,4 +1,4 @@
-# $Id: slow.t 497 2014-03-17 23:44:36Z whynot $
+# $Id: slow.t 498 2014-04-02 19:19:15Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,13 +7,13 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.1 );
+use version 0.77; our $VERSION = version->declare( v0.1.2 );
 
 use t::TestSuite qw| :temp :mthd :diag |;
 use File::AptFetch;
 use Test::More;
 
-my( $dsrc, $dtrg, $fsrc, $ftrg );
+my( $dsrc, $dtrg, $fsrc, $ftrg, $furi );
 my( $to, $tk );
 my( $tag, $faf, $rv, $serr, @data, $tick );
 
@@ -67,14 +67,17 @@ plan
   !$TS_Conf->{copy_slow}{block}   ?    ( skip_all => q|forbidden| ) :
                                               ( tests => 3 + 5*12 );
 
+my $tdpa = q|might fail for extremely unfair {tick} (%s)|;
+my $tdpb = q|might fail for unfair {tick} (%s)|;
+
 sub just_do_it ( $$ )                       {
 
     $tag = shift;
+    $faf->{tick} = $_[0];
     File::AptFetch::ConfigData->set_config( tick => shift );
     $fsrc = FAFTS_tempfile nick => qq|$tag-sr|, dir => $dsrc,
       content => "\c@" x $TS_Conf->{copy_slow}{source}{size};
-    $ftrg = FAFTS_tempfile nick => qq|$tag-tg|, dir => $dtrg;
-    unlink $ftrg;
+    $ftrg = FAFTS_tempfile nick => qq|$tag-tg|, dir => $dtrg, unlink => !0;
     @data = ( );
 
     ( $rv, $serr ) = FAFTS_wrap { $faf->request( $ftrg, $fsrc ) };
@@ -85,12 +88,13 @@ sub just_do_it ( $$ )                       {
                                     qq|$tag [request]|;
 
     ( $rv, $serr ) = FAFTS_wrap { $faf->gain };
+    $furi = $faf->{message}{uri};
     FAFTS_show_message %{$faf->{message}};
-    FAFTS_show_message %{$faf->{trace}{$ftrg}};
+    FAFTS_show_message %{$faf->{trace}{$furi}};
     is_deeply
     { rc => $rv,                   stderr => $serr,
       status => $faf->{Status}, log => $faf->{log},
-            file => $faf->{trace}{$ftrg}{filename} },
+            file => $faf->{trace}{$furi}{filename} },
     { rc => '',    stderr => '',
       status => 200, log => [ ],
                   file => $ftrg                    },
@@ -100,19 +104,19 @@ sub just_do_it ( $$ )                       {
       File::AptFetch::ConfigData->config( q|timeout| ) * 1.5;
     FAFTS_show_message %{$faf->{message}};
     FAFTS_diag q|+++ that's the last one +++|;
-    FAFTS_show_message %{$faf->{trace}{$ftrg}};
+    FAFTS_show_message %{$faf->{trace}{$furi}};
     FAFTS_diag q|+++ there're all except last +++|;
     FAFTS_show_message %$_                                      foreach @data;
     TODO:          {
-        local $TODO = sprintf q|might fail for extremely unfair {tick} (%s)|,
+        local $TODO = sprintf $tdpa,
           File::AptFetch::ConfigData->config( q|tick| );
         cmp_ok @data, q|<|, 3, sprintf qq|$tag there're ticks (%i)|,
           @data - 1 }
     TODO:                                                                  {
-        local $TODO = sprintf q|might fail for extremely fair {tick} (%s)|,
+        local $TODO = sprintf $tdpa,
           File::AptFetch::ConfigData->config( q|tick| );
-        cmp_ok $faf->{trace}{$ftrg}{flag}, q|>|, 1,
-          qq|$tag there're spare {tick}s left ($faf->{trace}{$ftrg}{flag})| }
+        cmp_ok $faf->{trace}{$furi}{flag}, q|>|, 1,
+          qq|$tag there're spare {tick}s left ($faf->{trace}{$furi}{flag})| }
     $tick = 1;
     $tick++           while defined $data[$tick] && defined $data[$tick]{tmp};
     FAFTS_diag q|+++ that's TP +++|;
@@ -127,20 +131,20 @@ sub just_do_it ( $$ )                       {
                                         qq|$tag (URI Done) [gain]|;
     SKIP:                                                         {
         skip qq|$tag tag+56ca no samples|, 2                    unless defined
-          $faf->{trace}{$ftrg}{tmp};
+          $faf->{trace}{$furi}{tmp};
         TODO:                      {
-            local $TODO = sprintf q|might fail for unfair {tick} (%s)|,
+            local $TODO = sprintf $tdpb,
               File::AptFetch::ConfigData->config( q|tick| );
-            cmp_ok $faf->{trace}{$ftrg}{factor}, q|==|, 1,
+            cmp_ok $faf->{trace}{$furi}{factor}, q|==|, 1,
               qq|$tag {factor} > 1| }
-        is $faf->{trace}{$ftrg}{size}, -s $fsrc, q|{size} is size| }
+        is $faf->{trace}{$furi}{size}, -s $fsrc, q|{size} is size| }
     SKIP:                               {
         skip qq|$tag tag+611c no samples|, 1                            unless
           2 < @data && defined $data[-2]{tmp};
         TODO:                          {
-            local $TODO = sprintf q|might fail for unfair {tick} (%s)|,
+            local $TODO = sprintf $tdpb,
               File::AptFetch::ConfigData->config( q|tick| );
-            isnt $faf->{trace}{$ftrg}{back}, -s $fsrc,
+            isnt $faf->{trace}{$furi}{back}, -s $fsrc,
               qq|$tag {back} == {size}| }}
     SKIP:                              {
       skip qq|$tag tag+afa8 no samples|, 1                unless $data[$tick];
@@ -178,7 +182,7 @@ $tk = int $to / 10 + 1;
 cmp_ok $tk, q|>=|, 10, qq|tick isn't fair ($tk)|;
 
 ( $faf, $serr ) = FAFTS_wrap { File::AptFetch->init( q|copy| ) };
-ok !$serr, qq|{STDERR} is empty|;
+is $serr, '', qq|{STDERR} is empty|;
 
 just_do_it q|tag+87af|, 5;
 just_do_it q|tag+1b17|, 2;

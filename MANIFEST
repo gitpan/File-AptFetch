@@ -20,11 +20,14 @@ t/file/0.t
 t/file/fail.t
 t/file/one.t
 t/file/two.t
+t/ftp/0.t
+t/ftp/slow.t
 t/read-callback/default.t
 t/simple/0.t
 t/simple/copy.t
 t/simple/fail.t
 t/TestSuite.pm
+t/v-method
 t/void/aptconfig.t
 t/void/configure.t
 t/void/destroy.t

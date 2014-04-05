@@ -1,4 +1,4 @@
-# $Id: two.t 497 2014-03-17 23:44:36Z whynot $
+# $Id: two.t 498 2014-04-02 19:19:15Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,35 +7,36 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.4 );
+use version 0.77; our $VERSION = version->declare( v0.1.5 );
 
 use t::TestSuite qw| :temp :mthd :diag |;
 use File::AptFetch;
 use Test::More;
 
 File::AptFetch::ConfigData->set_config( timeout => 10 );
+File::AptFetch::ConfigData->set_config( tick    =>  1 );
 
 my( $dir, $fsra, $fsrb );
 my( $faf, $rv, $serr, $done );
 
 my $Apt_Lib = t::TestSuite::FAFTS_discover_lib;
 plan
-  !defined $Apt_Lib     ? ( skip_all => q|not *nix, or misconfigured| ) :
-  !$Apt_Lib             ? ( skip_all =>       q|not Debian, or alike| ) :
-  !-x qq|$Apt_Lib/file| ? ( skip_all =>     q|missing method [file:]| ) :
-                          ( tests    =>                            13 );
+  !defined $Apt_Lib ? ( skip_all => q|not *nix, or misconfigured| ) :
+  !$Apt_Lib           ?     ( skip_all => q|not Debian, or alike| ) :
+  !-x qq|$Apt_Lib/file| ? ( skip_all => q|missing method [file:]| ) :
+                                                    ( tests => 13 );
 
 $dir = FAFTS_tempdir nick => q|dtag5017|;
 ( $faf, $serr ) = FAFTS_wrap { File::AptFetch->init( q|file| ) };
-ok !$serr, q|tag+02f2 {STDERR} is empty|;
+is $serr, '', q|tag+02f2 {STDERR} is empty|;
 
 $fsra = FAFTS_tempfile
   nick => q|ftag4b42|, dir => $dir, content => q|file two alpha|;
 $fsrb = FAFTS_tempfile
   nick => q|ftagb8c8|, dir => $dir, content => q|file two bravo|;
-is_deeply [ FAFTS_wrap { $faf->request( $fsra, $fsra ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $faf->request( $fsra, $fsra ) } ], [ '', '', '' ],
   q|tag+14d3|;
-is_deeply [ FAFTS_wrap { $faf->request( $fsrb, $fsrb ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $faf->request( $fsrb, $fsrb ) } ], [ '', '', '' ],
   q|tag+f6f9|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $faf;
 FAFTS_show_message %{$faf->{message}};
@@ -71,7 +72,7 @@ $fsra = FAFTS_tempfile
 $fsrb = FAFTS_tempfile
   nick => q|ftag022a|, dir => $dir, content => q|file two delta|;
 is_deeply
-[ FAFTS_wrap { $faf->request( $fsra, $fsra, $fsrb, $fsrb ) } ], [ '', '' ],
+[ FAFTS_wrap { $faf->request( $fsra, $fsra, $fsrb, $fsrb ) } ], [ '', '', '' ],
   q|tag+b5e2|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $faf;
 FAFTS_show_message %{$faf->{message}};
@@ -112,7 +113,7 @@ is_deeply
 
 $fsra = FAFTS_tempfile
   nick => q|ftag6ac5|, dir => $dir, content => q|file two echo|;
-is_deeply [ FAFTS_wrap { $faf->request( $fsra, $fsra ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $faf->request( $fsra, $fsra ) } ], [ '', '', '' ],
   q|tag+291e|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $faf;
 FAFTS_show_message %{$faf->{message}};

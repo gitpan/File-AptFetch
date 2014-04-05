@@ -1,4 +1,4 @@
-# $Id: one.t 494 2014-02-07 17:28:56Z whynot $
+# $Id: one.t 498 2014-04-02 19:19:15Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,27 +7,28 @@ use strict;
 use warnings;
 
 package main;
-use version 0.50; our $VERSION = qv q|0.1.2|;
+use version 0.77; our $VERSION = version->declare( v0.1.3 );
 
 use t::TestSuite qw| :temp :mthd :diag |;
 use File::AptFetch;
 use Test::More;
 
 File::AptFetch::ConfigData->set_config( timeout => 10 );
+File::AptFetch::ConfigData->set_config( tick    =>  1 );
 
 my( $dir, $fsrc );
 my( $faf, $rv, $serr, $fdat );
 
 my $Apt_Lib = t::TestSuite::FAFTS_discover_lib;
 plan
-  !defined $Apt_Lib     ? ( skip_all => q|not *nix, or misconfigured| ) :
-  !$Apt_Lib             ? ( skip_all =>       q|not Debian, or alike| ) :
-  !-x qq|$Apt_Lib/file| ? ( skip_all =>     q|missing method [file:]| ) :
-                          ( tests    =>                             7 );
+  !defined $Apt_Lib ? ( skip_all => q|not *nix, or misconfigured| ) :
+  !$Apt_Lib           ?     ( skip_all => q|not Debian, or alike| ) :
+  !-x qq|$Apt_Lib/file| ? ( skip_all => q|missing method [file:]| ) :
+                                                     ( tests => 7 );
 
 $dir = FAFTS_tempdir nick => q|dtag387d|;
 ( $faf, $serr ) = FAFTS_wrap { File::AptFetch->init( q|file| ) };
-ok !$serr, q|tag+5f28 {STDERR} is empty|;
+is $serr, '', q|tag+5f28 {STDERR} is empty|;
 
 $fsrc = FAFTS_tempfile
   nick => q|ftag2ea1|, dir => $dir, content => q|file one alpha|;
@@ -60,7 +61,7 @@ is_deeply
 
 $fsrc = FAFTS_tempfile
   nick => q|ftag9a2f|, $dir => $dir, content => q|file one bravo|;
-is_deeply [ FAFTS_wrap { $faf->request( $fsrc, $fsrc ) } ], [ '', '' ],
+is_deeply [ FAFTS_wrap { $faf->request( $fsrc, $fsrc ) } ], [ '', '', '' ],
   q|tag+dfe9|;
 ( $rv, $serr ) = FAFTS_wait_and_gain $faf;
 FAFTS_show_message %{$faf->{message}};

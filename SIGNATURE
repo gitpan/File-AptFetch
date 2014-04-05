@@ -14,38 +14,41 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 a283209990571a65170c34c7da4b8d4a79abc4b5 Build.PL
-SHA1 dd8ef2c3483ea45f1c04a46a3dd09748880975af Changes
-SHA1 14402f3f8d4861d992dafeaf18603b349ab72fcc MANIFEST
-SHA1 6d85a4c503477f97dc2d94b426b253e007b2c7da META.json
-SHA1 ac3c0444129d34ada526cb7f447f41455d734094 META.yml
+SHA1 099aec8f141043d979af2408de83a6fcb4f8270e Build.PL
+SHA1 e9c62b4d459f8242b42f84d8a89654ae11663411 Changes
+SHA1 a65aef3ab9ae6028bf129f99bd106ec6fff5b048 MANIFEST
+SHA1 67bb3cb63a540ac92ea5872df88cdd30ac2bedbe META.json
+SHA1 4cdf520225d1aad3c21fc04fa7b57367d363bd59 META.yml
 SHA1 c7a8c988b00f6ccc994113c2c07ec6becd2afeb5 README
-SHA1 d5854ee7c9bba1def32e1642b7dd44e741f11be2 lib/AptFetch.pm
+SHA1 a76300fdaa0a80e198dc9d0179cc62f5aee05625 lib/AptFetch.pm
 SHA1 568761fbbb66d9142908df63e972991de34d1ed9 lib/Cookbook.pod
-SHA1 0693f6cf829e4573358feede1b5316d63d403ed1 lib/Simple.pm
+SHA1 0c2229efa3786e70ee3debb8c5e394632ecbec23 lib/Simple.pm
 SHA1 fa875215ee1e8cf4ebbff6490487c6e9125f21ae t/0.t
 SHA1 81904f77cde01aafac630f5e36f2eefbd5089bfe t/0/9raCtd.t
 SHA1 b3a7ef2053253ca7a9abb76899f5f20391974b55 t/0/EmMn8o.t
-SHA1 421c003013314a077ebc6eac2f2e9dda153f9b45 t/TestSuite.pm
+SHA1 0c4acdc89562974e0ccd8e8bebd81ed0e8e6ac6a t/TestSuite.pm
 SHA1 d3ffb1c6971972057b6b63a3e60437c782b56484 t/copy/0.t
-SHA1 53f266a5c944938b87b351059e37f23db791aeb2 t/copy/fail.t
+SHA1 8cc204af75aed9e7390535b9f17adb2198caadcd t/copy/fail.t
 SHA1 9468273fc63d8379e673a2bafa2ec28cc9693a07 t/copy/one.t
-SHA1 4167e8f312188cecc8362f840358490b959d4bdc t/copy/perm.t
-SHA1 d02c7eb59c0cac0e5985ac8489fcfe7b44eb7216 t/copy/slow.t
+SHA1 7419a8aec3ef7e45b79fe75457f7bf6d3239ab3e t/copy/perm.t
+SHA1 e025c9a9711dd284e713d96376b46ce37f000b75 t/copy/slow.t
 SHA1 a0dec6bd54ce2a8120cb6704e27bab1fd6742256 t/copy/two.t
 SHA1 071c266d10826ecb7e42f3e33e66dd646880843f t/file/0.t
-SHA1 fe96c0d6031883deacadbb3c6f13493bb8d3d999 t/file/fail.t
-SHA1 94f4b6c7956ebb30b417e5ac09ea0b0f67e719cb t/file/one.t
-SHA1 0adda1248964841fb2164561fde0d05efa9284c5 t/file/two.t
+SHA1 2f39675ecde5590c8085d35808fff5f5fecd2e63 t/file/fail.t
+SHA1 c431f956eec89a751ce6a0bd6e21687d1ad1997d t/file/one.t
+SHA1 f86dc807041dcd1654a3724eba1037894a498757 t/file/two.t
+SHA1 b29eb349c72e4555d2e827c8b795d80194d61fe8 t/ftp/0.t
+SHA1 2406f47f07f2afcc166e1cd609a8dc6ce6d83e7c t/ftp/slow.t
 SHA1 0341d64c384f96a5b4332eec559ac69bef2fe66f t/read-callback/default.t
-SHA1 74f5ef88daf9d0306a45f74e2d2d9f9add4a3f53 t/simple/0.t
-SHA1 d67da17aaed532ea3c0a7ed2c7a7bc959860c9c5 t/simple/copy.t
-SHA1 151eee310c4d3219b1cd899c16da2fb3c5b69f0e t/simple/fail.t
+SHA1 7b21dc096deb3461bef817b04b51a0c33f2f31c1 t/simple/0.t
+SHA1 cb564be0e1d4b94c69374ea4acf41695266e0374 t/simple/copy.t
+SHA1 40c0632c659672af0922f81eaa7512b092fcc80d t/simple/fail.t
+SHA1 844f4257561668f07d23e4cdd7784f7c14781030 t/v-method
 SHA1 4bfd79e76d2245e0cb770625e9d20d225a64f765 t/void/aptconfig.t
 SHA1 c9ae6f9a5c7f78040f9e19211cc4486821ff63b2 t/void/configure.t
 SHA1 25594f748740e001b3ed79530c87d9ac4615281c t/void/destroy.t
 SHA1 35fa119b7aafe420ed9eed7898827c83d1814197 t/void/handshake.t
-SHA1 6511331255f0672a5516bfa655bb763624449cd1 t/void/set_callback.t
+SHA1 ab6aa3f02a3139add19f3a92e34acf12c1aa2668 t/void/set_callback.t
 SHA1 973a3037fe33728e8ea5e33ddcc835dd8ef81521 t/w-method
 SHA1 254759a020524ce1f7e25e2183d9d2dbf7d20021 t/x-method
 SHA1 f0b89f37c8db7e2d3d64d49da0ab6b945bde5f75 t/y-method
@@ -53,7 +56,7 @@ SHA1 eda8b80de713fb8b126ad8bd1f0b7d31444cc409 t/z-method
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.12 (GNU/Linux)
 
-iD8DBQFTJ4s71qsM9O+FbKQRAt/KAKDWO0h2l4lKS20pJ3P7fYP39Xv3tgCgvQkK
-+DmObU5t/Ol8HKnwh6HJhpo=
-=ih8r
+iD8DBQFTP0XE1qsM9O+FbKQRAt9VAJsErtd5vbY4OqItv0Jw/m6rcSeE7QCfcCf5
+yNNdLTKRfWck+NlqJlNL0vg=
+=4i7z
 -----END PGP SIGNATURE-----

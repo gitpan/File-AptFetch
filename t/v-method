@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+# $Id: v-method 498 2014-04-02 19:19:15Z whynot $
+# Copyright 2014 Eric Pozharski <whynot@pozharski.name>
+# GNU GPLv3
+# AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
+
+use strict;
+use warnings;
+
+package main;
+use version 0.77; our $VERSION = version->declare( v0.1.1 );
+
+use IO::Handle;
+
+STDOUT->autoflush( 1 );
+
+my $fn = <DATA>;
+chomp $fn;
+open STDERR, q|>>|, $fn                        or die qq|[open] (STDERR): $!|;
+my $tout = <DATA>;
+chomp $tout;
+
+my $self = ( split m{/}, $0 )[-1] . ':';
+foreach my $line
+( q|100 Capabilities|,
+  q|Single-Instance: true|,
+  qq|Version: $VERSION|,
+  '' ) { print STDERR qq|[$line]\n|; print STDOUT qq|$line\n| }
+while( <DATA> )          {
+    chomp;
+    s{\Q+++\E}{$self}g;
+    print STDERR qq|[$_]\n|;
+    print STDOUT qq|$_\n| }
+
+my $mark = time;
+while( <STDIN> )                 {
+    chomp;
+    print STDERR qq|{$_}\n|;
+    time - $mark > $tout and exit }
+
+# vim: set filetype=perl

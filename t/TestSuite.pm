@@ -1,4 +1,4 @@
-# $Id: TestSuite.pm 497 2014-03-17 23:44:36Z whynot $
+# $Id: TestSuite.pm 498 2014-04-02 19:19:15Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -10,7 +10,7 @@ package DB;
 sub get_fork_TTY { xterm_get_fork_TTY() }
 
 package t::TestSuite;
-use version 0.77; our $VERSION = version->declare( v0.1.4 );
+use version 0.77; our $VERSION = version->declare( v0.1.5 );
 use parent qw| Exporter |;
 use lib     q|./blib/lib|;
 
@@ -122,6 +122,11 @@ C<void> isa deafult.
 
 Obvious.
 
+=item I<$unlink>
+
+If TRUE then just created temporal is removed.
+Only filename what's left.
+
 =back
 
 Returns a filename.
@@ -143,6 +148,7 @@ sub FAFTS_tempfile ( % ) {
       DIR => $args{dir} || cwd, SUFFIX => $args{suffix} || '';
     push @Tempfiles, $fn;
     print $fh $args{content}                                if $args{content};
+    unlink $fn or croak qq|[unlink] ($fn): $!|               if $args{unlink};
     return $fn            }
 
 END { unlink @Tempfiles if $$ == shift @Tempfiles }
@@ -301,37 +307,41 @@ END_OF_METHOD
 =item B<FAFTS_wrap()>
 
     use t::TestSuite qw/ :mthd /;
-    ( $rv, $stderr ) = FAFTS_wrap { die q|gotch ya| };
+    ( $rv, $stderr, $stdout ) = FAFTS_wrap { die q|gotch ya| };
 
 Safety wrapper around code that could B<die> or B<fork>-and-B<die>.
 Returns whatever I<code>.
 If I<code> fails, then I<$@> is returned.
-In list context also returns whatever has been printed on I<STDERR>.
-In either case I<STDERR> is passed to L</B<FAFTS_diag()>>.
+In list context also returns whatever has been printed
+on I<STDERR> and I<STDOUT>.
+In either case I<STDERR> and I<STDOUT> are passed to L</B<FAFTS_diag()>>.
 
 =cut
 
 my $root_pid = $$;
-sub FAFTS_wrap ( & )                         {
+sub FAFTS_wrap ( & )                           {
     require POSIX                              or die q|<POSIX> is missing\n|;
     my $code = shift;
     my $stderr = FAFTS_tempfile nick => q|stderr|;
-    open my $bckerr, q|>&|, \*STDERR     or croak qq|save [dup] (STDERR): $!|;
+    open my $bckerr, q|>&|, \*STDERR     or croak qq|push [dup] (STDERR): $!|;
+    my $stdout = FAFTS_tempfile nick => q|stdout|;
+    open my $bckout, q|>&|, \*STDOUT     or croak qq|push [dup] (STDOUT): $!|;
 
     open STDERR, q|>|, $stderr;
+    open STDOUT, q|>|, $stdout;
     my( $rv, $ee );
     eval { $rv = $code->(); 1 }                                   or $ee = $@;
     $$ != $root_pid                                 and POSIX::_exit( !!$ee );
-    open STDERR, q|>&|, $bckerr       or croak qq|restore [dup] (STDERR): $!|;
+    open STDERR, q|>&|, $bckerr           or croak qq|pop [dup] (STDERR): $!|;
+    open STDOUT, q|>&|, $bckout           or croak qq|pop [dup] (STDOUT): $!|;
 
     $rv = $ee                                              unless defined $rv;
     FAFTS_diag !defined $rv                    ?           q|RV: (undef)| :
       ref $rv && $rv->isa( q|File::AptFetch| ) ? qq|method: ($rv->{pid})| :
                                                             qq|RV: ($rv)|;
-    open $bckerr, q|<|, $stderr             or croak qq|[open] ($stderr): $!|;
-    read $bckerr, $stderr, -s $bckerr;
-    FAFTS_diag $stderr;
-    return wantarray ? ( $rv, $stderr ) : $rv }
+    $stderr = FAFTS_get_file $stderr;
+    $stdout = FAFTS_get_file $stdout;
+    wantarray ? ( $rv, $stderr, $stdout ) : $rv }
 
 =item B<FAFTS_wait_and_gain()>
 

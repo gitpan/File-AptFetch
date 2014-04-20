@@ -1,4 +1,4 @@
-# $Id: AptFetch.pm 498 2014-04-02 19:19:15Z whynot $
+# $Id: AptFetch.pm 499 2014-04-19 19:24:45Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use warnings;
 use strict;
 
 package File::AptFetch;
-use version 0.77; our $VERSION = version->declare( v0.1.7 );
+use version 0.77; our $VERSION = version->declare( v0.1.8 );
 
 use File::AptFetch::ConfigData;
 use Carp;
@@ -148,7 +148,7 @@ Documentation of this library must maintain 4 namespaces:
 
 =over
 
-=item FunctionZ<>E<sol>method parameter list (I<@_>)
+=item Function/method parameter list (I<@_>)
 
 Within a section they always refer to parameter names and keys
 (if I<@_> is hash)
@@ -237,6 +237,8 @@ B<init()> just follows them.
 
 I<$method> is saved in same named key for reuse.
 
+Give-up codes:
+
 =over
 
 =item ($method): (lib_method): neither preset nor found
@@ -283,7 +285,7 @@ L</_cache_configuration()> -- those can emit their own give-up codes
 
 my @apt_config;
 
-sub init        {
+sub init {
     my $cls = shift @_;
     my $self = { };
     $self->{method} = shift @_          or return q|($method) is unspecified|;
@@ -293,7 +295,7 @@ sub init        {
     $self->{tick} = File::AptFetch::ConfigData->config( q|tick| );
     bless $self, $cls;
     my $rc;
-    $rc = $self->_cache_configuration                          and return $rc;
+    '' eq ($rc = $self->_cache_configuration)                   or return $rc;
     File::AptFetch::ConfigData->config( q|lib_method| )              or return
       qq|($self->{method}): (\$lib_method): neither preset nor found|;
     $self->{it} = IO::Pipe->new;
@@ -327,13 +329,21 @@ sub init        {
     @{$self->{log}} && !$self->{log}[-1]                             or return
       qq|($self->{method}): timeouted without handshake|;
 
-    $rc = $self->_parse_status_code                            and return $rc;
-    $self->{Status} == 100                                           or return
-      qq|($self->{method}): ($self->{Status}): | .
-      q|that's supposed to be (100 Capabilities)|;
-    $rc = $self->_parse_message                                and return $rc;
-
-    return $self }
+# XXX:201404072118:whynot: Is it possible that in case of C<tag+107c> that assignment (and next one) is, spontaneously, treated as num-eq;  What results in C<'' == ''> (with no warnings(sic!)) and then B<return> that C<>?
+# XXX:201404072146:whynot: Or.  Is it possible that B<_parse_status_code()> (or B<_parse_message()>), spontaneously, returns spcial C<'' or 0>?
+# XXX:201404072148:whynot: Or.  Is it B<_cache_configuration()>?
+# http://www.cpantesters.org/cpan/report/a27fdb52-bce0-11e3-add5-ed1d4a243164
+# because
+# http://www.cpantesters.org/cpan/report/0f218626-bcc2-11e3-add5-ed1d4a243164
+    if( '' ne ($rc = $self->_parse_status_code) )    {}
+    elsif( $self->{Status} != 100               )    {
+        $rc =
+          qq|($self->{method}): ($self->{Status}): | .
+          q|that's supposed to be (100 Capabilities)| }
+    elsif( '' ne ($rc = $self->_parse_message)  )    {}
+    else                                             {
+        $rc = $self                                   }
+      $rc }
 
 =item B<DESTROY()>
 
@@ -404,37 +414,30 @@ Known tags are:
 
 L</B<_read()>> has more.
 
-=back
+=item C<select>
 
-Diagnostics provided:
-
-=over
-
-=item (%s): candiate to pass in neither CODE nor (undef)
-
-Tag C<%s> (may be unknown) tries to set something for callback.
-That must be either CODE or C<undef>.
-It's not.
-
-=item (%s): unknown callback
-
-Tag C<%s> is unknown.
-Nothing to do with it but B<croak>.
+(I<v0.1.8>) L</B<_read()>> has more.
 
 =back
 
 =cut
 
-my( $_gain_callback, $_read_callback );
-sub set_callback ( % )                                                 {
+my( $_gain_callback, $_read_callback, $_select_callback );
+sub set_callback ( % )                            {
     my %callbacks = @_;
-    while( my( $tag, $code ) = each %callbacks )                      {
+    while( my( $tag, $code ) = each %callbacks ) {
         ref $code eq q|CODE| || !defined $code                        or croak
           qq|($tag): candidate to pass in is neither CODE nor (undef)|;
-        if( $tag eq q|read| && $code ) {      $_read_callback = $code }
-        elsif( $tag eq q|read| ) { $_read_callback = \&_read_callback }
-        elsif( $tag eq q|gain| ) {            $_gain_callback = $code }
-        else                     { croak qq|($tag): unknown callback| }}}
+        if( $tag eq q|read| && $code )        {
+            $_read_callback = $code            }
+        elsif( $tag eq q|read|       )        {
+            $_read_callback = \&_read_callback }
+        elsif( $tag eq q|gain|       )        {
+            $_gain_callback = $code            }
+        elsif( $tag eq q|select|     )        {
+            $_select_callback = $code          }
+        else                                  {
+            croak qq|($tag): unknown callback| }  }}
 
 =item B<request()>
 
@@ -489,7 +492,7 @@ Actual request is filed at once (subject to buffering though),
 in one big (or not so) chunk (as requested by API).
 I<@$diag> field is updated accordingly.
 
-Diagnostic provided:
+Give-up codes:
 
 =over
 
@@ -539,7 +542,7 @@ It can be S<'URI Start'>, S<'URI Done'>, or S<'URI Failure'> messages.
 Anyway, message is stored in I<@$diag> and I<%$message> fields of object;
 I<$Status> and I<$status> are set too.
 
-Diagnostic provided:
+Give-up codes:
 
 =over
 
@@ -563,7 +566,8 @@ The possible cause would be you've run out of requests
 
 =back
 
-L</_parse_status_code()> and L</_parse_message()> can emit their own messages.
+L</_parse_status_code()> and L</_parse_message()> can emit their own give-up
+codes.
 
 Unless any problems just before B<return> C<gain> callback is tried (if any).
 That CODE is given the object as an argument.
@@ -597,11 +601,13 @@ Internal.
 Picks one item from I<@$log> and attempts to process it as a Status Code.
 Consequent items are unaffected.
 
+Give-up codes:
+
 =over
 
 =item ($method): ($log_item): that's not a Status Code
 
-The $log_item must be C<qrZ<>E<sol>^\d{3}\s+.+E<sol>>.
+The $log_item must be C<qr/^\d{3}\s+.+/>.
 No luck this time.
 
 =back
@@ -646,6 +652,8 @@ What if a method yelds C<Foo-Bar:> and C<Foo_Bar:> headers?
 Right now, B<_parse_message()> will fail if a message header gets reset.
 But those headers are different and should be handled appropriately.
 They aren't.
+
+Give-up codes:
 
 =over
 
@@ -778,7 +786,7 @@ What should be investigated:
 * how percents in I<$value> are handled?
 Pending.
 
-Diagnostic provided:
+Give-up codes:
 
 =over
 
@@ -813,7 +821,7 @@ but failed to provide any output to parse at all.
 
 sub _cache_configuration {
     my $self = shift;
-    @apt_config                                                    and return;
+    @apt_config                                                 and return '';
     $self->{me} = IO::Pipe->new;
     
     defined( $self->{pid} = fork )  or die qq|[fork] (apt-config) failed: $!|;
@@ -1002,6 +1010,7 @@ sub _read {
         $timeout -= $self->{tick};
         my $vec = '';
         vec( $vec, $self->{me}->fileno, 1 ) = 1;
+        $_select_callback->( $self )                     if $_select_callback;
         unless( select $vec, undef, undef, $self->{tick} )        {
             my $rc;
             $rc +=
@@ -1094,6 +1103,101 @@ sub _read_callback   {
     0 < $st->{flag}-- }
 
 set_callback read => \&_read_callback;
+
+=back
+
+=cut
+
+=head1 DIAGNOSTICS
+
+Most error communication is done through give-up codes.
+However, some conditions aren't worth of keeping process alive -- those are
+marked as B<(fatal)>.
+Others are (mostly) in just B<fork>ed process that just couldn't boot
+properly -- those are communicated back (somehow).
+
+=over
+
+=item (%s): candiate to pass in neither CODE nor (undef)
+
+B<(fatal)>
+In L</set_callback()>.
+Tag C<%s> (may be unknown) tries to set something for callback.
+That must be either CODE or C<undef>.
+It's not.
+
+=item (%s): unknown callback
+
+B<(fatal)>
+In L</set_callback()>.
+Tag C<%s> is unknown.
+Nothing to do with it but B<croak>.
+
+=item [close] (reader): $!
+
+In L</DESTROY()> (that's why it's not fatal).
+Closing I<STDIN> of child has failed.
+Nothing to do with it except blast ahead
+(probably, would stuck in B<waitpid> then).
+
+=item [close] (writer): $!
+
+In L</DESTROY()> (that's why it's not fatal).
+Closing I<STDOUT> of child has failed.
+Nothing to do with it except blast ahead
+(probably, would stuck in B<waitpid> then).
+
+=item [dup] (STDIN): $!
+
+In L</init()>.
+Turning reader pipe into I<STDIN> has failed.
+Parent will express it with S<($method): ($?): died without handshake> give-up
+code.
+
+=item [dup] (STDOUT): $!
+
+In L</init()> or L</_cache_configuration()>.
+Turning writer pipe into I<STDOUT> has failed.
+Parent will express it with S<($method): ($?): died without handshake> or
+S<($method): (apt-config) died: ($?)> give-up code.
+
+=item [exec] ($method): $!
+
+In L</init()>.
+Executing requested I<$method> has failed.
+Parent will express it with S<($method): ($?): died without handshake> give-up
+code.
+
+=item [fork] ($method): $!
+
+=item [fork] (apt-config): $!
+
+B<(fatal)>
+In L</init()> (or L</_cache_configuration()> if talks about C<apt-config>).
+B<fork> has failed.
+Nothing can be done about it.
+
+=item [kill] ($pid): nothing to kill or $!
+
+In L</DESTROY()> (that's why it's not fatal).
+Child has been reaped somehow already.
+Probably OK for *nix of yours.
+
+=item [open] (STDIN): failed: $!
+
+In L</_cache_configuration()>.
+Turning I<STDOUT> of upcoming I<$config_source>
+(in B<File::AptFetch::ConfigData>) into F</dev/null> has failed.
+Parent will express it with S<($method): (apt-config) died: ($?)> give-up
+code.
+
+=item should not be here at .../File/AptFetch.pm line %i
+
+B<(fatal)>
+In L</_read()>.
+Per implementetaion there's a chain of if-elsif-else.
+That B<else> covers a routes I haven't think of.
+Purely my fault.
 
 =back
 

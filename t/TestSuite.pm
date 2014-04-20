@@ -1,4 +1,4 @@
-# $Id: TestSuite.pm 498 2014-04-02 19:19:15Z whynot $
+# $Id: TestSuite.pm 499 2014-04-19 19:24:45Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -10,7 +10,7 @@ package DB;
 sub get_fork_TTY { xterm_get_fork_TTY() }
 
 package t::TestSuite;
-use version 0.77; our $VERSION = version->declare( v0.1.5 );
+use version 0.77; our $VERSION = version->declare( v0.1.6 );
 use parent qw| Exporter |;
 use lib     q|./blib/lib|;
 
@@ -33,9 +33,6 @@ our $Empty_MD5 = q|d41d8cd98f00b204e9800998ecf8427e|;
 
 $ENV{PERL5LIB} = getcwd . q(/blib/lib);
 
-# FIXME: B<&Module::Build::runtime_params> apeared in v0.28
-our $Verbose = eval { Module::Build->current->runtime_params(q|verbose|); };
-
 =head1 DIAGNOSTIC OUTPUT
 
 =over
@@ -48,23 +45,79 @@ our $Verbose = eval { Module::Build->current->runtime_params(q|verbose|); };
     FAFTS_diag $@
 
 Outputs through B<Test::More::diag()>.
-Void if I<STDOUT> isa not terminal, I<$ENV{QUIET}> is TRUE, I<@_> is empty, or
+Void if I<$ENV{QUIET}> is TRUE, I<@_> is empty, or
 I<@_> consists of FALSEs.
+
+If C<!-t> I<STDOUT> whatever (unless missing) is thrown in is collected
+(with fancy header prepended) for later output.
+C<Result: FAIL> or I<$ENV{FAFTS_VERBOSE}> will force such output just before
+an unit would finish.
+
+"Fancy header" looks like this:
+
+    *** (tag+c04f): <t/unit+5467.t> [FAFTS_wrap] (132) ***
+
+=over
+
+=item *
+
+Either:
+
+=over
+
+=item +
+
+Some identifing mark set through I<$t::TestSuite::Diag_Tag> --
+mostly in code cycling over a data-set.
+
+=item +
+
+Stack depth -- a placeholder otherwise.
+
+=back
+
+=item *
+
+A filename of unit.
+
+=item *
+
+A subroutine in B<t::TestSuite> namespace what has something to diag.
+
+=item *
+
+A line number where aforementioned subroutine has been called.
+
+=back
 
 =cut
 
-sub FAFTS_diag ( @ )      {
-    -t STDOUT && !$ENV{QUIET} && @_ && grep $_, @_                  or return;
-    Test::More::diag( @_ ) }
+our $Diag_Tag;
+my @precious;
+sub FAFTS_diag ( @ )                                                    {
+    unless( !$ENV{QUIET} && @_ && grep $_, @_                       )  {}
+    elsif( (!-t STDOUT || $ENV{FAFTS_VERBOSE}) && @_ && grep $_, @_ )  {
+        my @stck;
+        my $dpth = 5;
+        @stck = ( caller $dpth-- )[1,3,2]                                until
+          @stck && $stck[1] =~ m{^t::TestSuite};
+        $stck[1] = ( $stck[1] =~ m{([^:]+)$} )[0];
+        push @precious,
+          sprintf( qq|*** (%s): <%s> [%s] (%i) ***\n|,
+            $Diag_Tag || $dpth + 1, @stck ),
+          map { -1 == index( reverse( $_ ), "\n" ) ? qq|$_\n| : $_ } @_ }
+    else                                                               {
+        Test::More::diag( @_ )                                          }}
 
-=item B<FAFTS_show_message>
+END { Test::More::diag( @precious )             if $? || $ENV{FAFTS_VERBOSE} }
+
+=item B<FAFTS_show_message()>
 
     use t::TestSuite qw/ :diag /;
     FAFTS_show_message %arg
 
-B<diag>s (debian config alike) contents of a I<%arg>.
-That I<%arg> is supposedly parsed I<$message> from a method.
-Void if I<STDOUT> isa not terminal, I<$ENV{QUIET}> isa TRUE, or I<@_> is
+B<FAFTS_diag>s (debian config alike) contents of a I<%arg>.
+Void if I<@_> is
 empty.
 If value of supposed key from I<%arg> evaluates to C<undef>
 then silently replaces with C<(undef)>.
@@ -73,13 +126,12 @@ then silently replaces with C<(undef)>.
 
 =cut
 
-sub FAFTS_show_message (%)  {
-    -t STDOUT && !$ENV{QUIET} && @_                                 or return;
+sub FAFTS_show_message ( % ) {
+    @_                                                              or return;
     my %message = @_;
-    Test::More::diag(
-      map sprintf( qq|%s: %s\n|,
-        $_, defined $message{$_} ? $message{$_} : q|(undef)| ),
-        sort keys %message ) }
+    FAFTS_diag map sprintf( qq|%s: %s\n|,
+      $_, defined $message{$_} ? $message{$_} : q|(undef)| ),
+      sort keys %message      }
 
 =head1 FILES AND DIRECTORIES
 
@@ -459,7 +511,7 @@ Returns:
 
 =item *
 
-If no YAML is found then retuns C<undef>.
+If no YAML is found then returns C<undef>.
 
 =item *
 
@@ -499,4 +551,4 @@ sub FAFTS_discover_config ( )                                 {
 
 =cut
 
-1;
+1

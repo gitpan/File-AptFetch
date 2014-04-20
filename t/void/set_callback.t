@@ -1,4 +1,4 @@
-# $Id: set_callback.t 498 2014-04-02 19:19:15Z whynot $
+# $Id: set_callback.t 499 2014-04-19 19:24:45Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.2 );
+use version 0.77; our $VERSION = version->declare( v0.1.3 );
 
 use t::TestSuite qw| :temp :mthd :file :diag |;
 use File::AptFetch;
@@ -18,7 +18,7 @@ my( $faf, $rv, $serr );
 
 my $Apt_Lib = t::TestSuite::FAFTS_discover_lib;
 plan                        !defined $Apt_Lib ?
-( skip_all => q|not *nix, or misconfigured| ) : ( tests => 26 );
+( skip_all => q|not *nix, or misconfigured| ) : ( tests => 37 );
 
 ( $rv, $serr ) = FAFTS_wrap                           {
     File::AptFetch::set_callback q|tag+8af5| => sub { }};
@@ -128,5 +128,43 @@ like $rv, qr{timeouted without responce}, q|clears [gain] callback|;
 undef $faf;
 like FAFTS_get_file $stderr, qr{600 URI Acquire},
   q|tag+656e {STDERR} is empty|;
+
+( $rv, $serr ) = FAFTS_wrap                                      {
+    File::AptFetch::set_callback select => sub { die q|tag+90fa| }};
+is $serr, '', q|tag+db54 {STDERR} is empty|;
+
+$fsrc = FAFTS_tempfile nick => q|ftag21e0|, dir => $arena;
+$ftrg = FAFTS_tempfile nick => q|ftageab6|, dir => $arena;
+$mthd = FAFTS_prepare_method
+  FAFTS_tempfile( nick => q|mtaga183|, dir => $arena ),
+  q|v-method|,              $stderr,               200,
+  q|200 URI Start|,    qq|Uri: +++$fsrc|,   q|Size: 0|;
+( $faf, $serr ) = FAFTS_wrap { File::AptFetch->init( $mthd ) };
+like $faf, qr{tag.90fa}, q|sets [select] callback|;
+is $serr, '', q|tag+3e71 {STDERR} is empty|;
+undef $faf;
+is FAFTS_get_file $stderr, '', q|tag+38a2 {STDERR} is empty|;
+
+( $rv, $serr ) = FAFTS_wrap { File::AptFetch::set_callback select => undef };
+is $serr, '', q|tag+03f4 {STDERR} is empty|;
+
+$fsrc = FAFTS_tempfile nick => q|ftag971b|, dir => $arena;
+$ftrg = FAFTS_tempfile nick => q|ftag8929|, dir => $arena;
+$mthd = FAFTS_prepare_method
+  FAFTS_tempfile( nick => q|mtag484f|, dir => $arena ),
+  q|v-method|,               $stderr,              200,
+  q|200 URI Start|,   qq|Uri: +++$fsrc|,    q|Size: 0|;
+( $faf, $serr ) = FAFTS_wrap { File::AptFetch->init( $mthd ) };
+isa_ok $faf, q|File::AptFetch|, q|tag+023b [init]|;
+is $serr, '', q|tag+ea68 {STDERR} is empty|;
+( $rv, $serr ) = FAFTS_wrap { $faf->request( $ftrg, $fsrc ) };
+is_deeply { rv => $rv, stderr => $serr }, { rv => '', stderr => '' },
+  q|tag+6f22 [request]|;
+( $rv, $serr ) = FAFTS_wrap { $faf->gain };
+like $rv, qr{timeouted without responce}, q|clears [select] callback|;
+is $serr, '', q|tag+2b73 {STDERR} is empty|;
+undef $faf;
+like FAFTS_get_file $stderr, qr{600 URI Acquire},
+  q|tag+5917 {STDERR} is empty|;
 
 # vim: syntax=perl

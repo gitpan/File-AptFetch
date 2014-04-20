@@ -1,4 +1,4 @@
-# $Id: Simple.pm 498 2014-04-02 19:19:15Z whynot $
+# $Id: Simple.pm 499 2014-04-19 19:24:45Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package File::AptFetch::Simple;
-use version 0.77; our $VERSION = version->declare( v0.1.2 );
+use version 0.77; our $VERSION = version->declare( v0.1.3 );
 use base qw| File::AptFetch |;
 
 use Carp;
@@ -228,6 +228,7 @@ Should dump the damn message.
 
 =cut
 
+my %stat;
 sub request {
     my( $class, $args, @subj ) = @_;
     my $self;
@@ -248,6 +249,7 @@ sub request {
             unshift @subj, $args; $args = { } }
         elsif( !$args )                      {
             $args = { }                       }            }
+
 # FIXME:201404012258:whynot: Must handle F<0> specially.
     my $loc = abs_path $args->{location} || $self->{location} || '.';
     my $rv = $self->SUPER::request( map  {
@@ -256,6 +258,7 @@ sub request {
         my $bnam = ( split m{/} )[-1];
         qq|$loc/$bnam| => { uri => $src } } @subj );
     $rv                                                         and croak $rv;
+
     while( %{$self->{trace}} )                                      {
         $rv = $self->SUPER::gain;
         $rv                                                     and croak $rv;
@@ -272,6 +275,21 @@ sub request {
                 print qq|($fn): ($self->{status})\n|                       }
             delete $self->{trace}{$fn}                              }}
        $self }
+
+=item B<_read_callback()>
+
+# TODO:
+
+=cut
+
+sub _read_callback {
+    my $rec = shift;
+    my $rv = File::AptFetch::_read_callback $rec;
+    my $diff = $rec->{size} && $rec->{back} ? $rec->{size} - $rec->{back} : 0;
+    $stat{inc} += $diff                                          if $diff > 0;
+                $rv }
+
+File::AptFetch::set_callback read => \&_read_callback;
 
 =back
 

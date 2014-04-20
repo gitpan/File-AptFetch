@@ -1,3 +1,11 @@
+  v0.1.8 20140419
+
+      *   Adding *select* callback (*gain* callback looks useless now)
+          (AAMOF, it's release excuse).
+
+      *   Attempt to fix linux-but-debian FTBFSes (weird) (most
+          probably, won't fix anything; just an excuse to peek into).
+
   v0.1.7 20140403
 
       *   Introducing *gain* callback (preparing place for F::AF::S to

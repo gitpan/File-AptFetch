@@ -1,4 +1,4 @@
-# $Id: AptFetch.pm 499 2014-04-19 19:24:45Z whynot $
+# $Id: AptFetch.pm 501 2014-05-14 22:19:48Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use warnings;
 use strict;
 
 package File::AptFetch;
-use version 0.77; our $VERSION = version->declare( v0.1.8 );
+use version 0.77; our $VERSION = version->declare( v0.1.9 );
 
 use File::AptFetch::ConfigData;
 use Carp;
@@ -52,7 +52,9 @@ L<File::AptFetch::Cookbook> has more.
 I<(disclaimer)>
 Right now, B<F::AF> is in "proof-of-concept" state.
 It surely works with local methods (F<file> and F<copy>);
-I hope it will work within trivial cases with remote methods.
+I hope it will work with trivial cases of remote methods
+(I<v0.1.9> I've left to hope, it totally does;
+no manual interaction (credentials and/or tray closing) provided).
 (B<F::AF> has no means to accept (not talking about to pass along)
 authentication credentials;
 So if your upstream needs authentication, B<F::AF> is of no help here.)
@@ -80,32 +82,17 @@ There's a list of known bugs, caveats, and deficiencies.
 
 =item *
 
-At two points B<F::AF> reads and writes pipes.
-C<SIGALRM> and C<SIGPIPE> are of concern
-(C<SIGCHLD> support just talks about that signal;
-the signal by itself is ignored).
-However, that's possible, that B<eval> would be broken with some other signal.
-Hopefully, some day I'll find some other way to support such situation.
-Right now -- B<F::AF> will B<die>.
+(I<v0.1.9>)
+There were some concerns about signals.
+Surprisingly, they're gone now.
+The only corner left to try is a child ignoring signals at all
+(stuck in syscall?).
 
 =item *
 
 That seems that upon normal operation there're no zombies left.
 However, I'm not sure if B<waitpid> would work as expected.
 (What if some method would take lots of time to die after being signaled?)
-
-=item *
-
-C<SIGCHLD> is ignored by default.
-C<SIGPIPE> is not.
-It's supported only while interacting with a child.
-If method decides to die some time outside those IPC sections, then your
-process will get C<SIGCHLD> and possible C<SIGPIPE>.
-(To be honest, may be I'm overpessimistic here
-(if process goes away it becomes a zombie;
-if it didn't closed its input (your output), then should stay;
-than there's no place for C<SIGPIPE>).
-Should verify.)
 
 =item *
 
@@ -324,9 +311,10 @@ sub init {
       q|601 Configuration|, map( qq|Config-Item: $_|, @apt_config ), '' );
 
     $rc = $self->_read;
-    $self->{CHLD_error}                                             and return
+    $self->{ALRM_error}           and return qq|($self->{method}): timeouted|;
+    exists $self->{CHLD_error}                                      and return
       qq|($self->{method}): ($self->{CHLD_error}): died without handshake|;
-    @{$self->{log}} && !$self->{log}[-1]                             or return
+    @{$self->{log}}                                                  or return
       qq|($self->{method}): timeouted without handshake|;
 
 # XXX:201404072118:whynot: Is it possible that in case of C<tag+107c> that assignment (and next one) is, spontaneously, treated as num-eq;  What results in C<'' == ''> (with no warnings(sic!)) and then B<return> that C<>?
@@ -550,12 +538,15 @@ Give-up codes:
 
 Something gone wrong, the APT's method has died;
 More diagnostic might gone onto I<STDERR>.
+Even if I<$CHLD_error> is C<0> the method still died on us --
+it's not supposed to exit.
 
 =item ($method): timeouted without responce
 
 The APT's method has quit without properly terminating message with empty line
 or failed to output anything at all.
 Supposedly, shouldn't happen.
+Otherwise, that's your fault -- you asked for entry without reason.
 
 =item ($method): timeouted
 
@@ -580,13 +571,14 @@ B<(note)> That might change in future, beter return TRUE.
 sub gain {
     my $self = shift @_;
 
-    unless( @{$self->{log}} )                                          {
+# XXX:201405110319:whynot: It looks excessive.  It's not.  There could be multiple unparsed entries.
+    until( @{$self->{log}} && grep $_ eq '', @{$self->{log}} ) {
         $self->_read;
-        $self->{CHLD_error}                                         and return
+        $self->{ALRM_error}       and return qq|($self->{method}): timeouted|;
+        exists $self->{CHLD_error}                                  and return
           qq|($self->{method}): ($self->{CHLD_error}): died|;
-        @{$self->{log}} && !$self->{log}[-1]                         or return
-          qq|($self->{method}): timeouted without responce|;
-        $self->{ALRM_error} and return qq|($self->{method}): timeouted| }
+        @{$self->{log}}                                              or return
+          qq|($self->{method}): timeouted without responce|     }
 
     my $rv = $self->_parse_status_code || $self->_parse_message;
     $_gain_callback->( $self )      if ref $_gain_callback eq q|CODE| && !$rv;
@@ -732,7 +724,9 @@ I<@$config_source> must provide reasonable output -- that's the only
 requirement
 (look below for details).
 
-B<(bug)> While I<@$config_source> is configurable all diagnostic messages refer
+B<(bug)>
+While I<@$config_source> is configurable all give-up codes and
+diagnostic messages refer
 to C<'apt-config'>.
 
 I<@$config_source>'s output is postprocessed --
@@ -760,7 +754,7 @@ Then comes cooking (all cooking is found by observation, it mimics APT-talk
 with methods):
 * trailing double pair-of-colons in I<$name> is trimmed to single pair;
 * every space in I<$value> is percent escaped (C<%20>);
-* every equal sign in I<$value> is percent escaped (C<3d>).
+* every equal sign in I<$value> is percent escaped (C<%3d>).
 
 That last one, needs some explanation.
 B<apt.conf(5)> clearly states:
@@ -848,6 +842,7 @@ sub _cache_configuration {
     waitpid delete $self->{pid}, 0                            if $self->{pid};
     $self->{ALRM_error}                                             and return
       qq|($self->{method}): (apt-config): timeouted|;
+# XXX:201405122039:whynot: I<$CHLD_error> is C<0> here.  But we don't care.
     $self->{CHLD_error}                                             and return
       qq|($self->{method}): (apt-config) died: ($self->{CHLD_error})|;
     @{$self->{log}}                                                  or return
@@ -869,6 +864,7 @@ sub _cache_configuration {
             $rec =~ m{^Dir::Bin::methods=(.+)$}                       or next;
             File::AptFetch::ConfigData->set_config( lib_method => $1 );
                                last }                             }
+    delete $self->{CHLD_error};
     @apt_config = ( @cache );
 # FIXME:201403151954:whynot: Otherwise I<@apt_config> would be returned.  That's not going to change.
                        '' }
@@ -906,20 +902,34 @@ sub _uncache_configuration () { @apt_config = ( ) }
 
 Internal.  Refactored.
 That attempts to read the log entry.
-Each item is B<chomp>ed and then B<push>ed onto I<@$log>.
-If item happens to be empty line then finishes.
-The I<@$log> isn't filled atomically, so check if the last line was empty.
-
-That provides no diagnostic.
-However
+Whatever has been read is split in items, B<chomp>ed, and B<push>ed onto
+I<@$log>.
+Now, item consuming will be finished if:
 
 =over
 
-=item child timeouts
+=item empty-line separator has been found
+
+(I<v0.1.9> there was major breakage at that point after I<v0.1.4>)
+Somewhere in I<@$log> there's, at least one, empty-line separtor.
+For technical reasons it doesn't have to be the last one.
+For more confusion the last item might be unempty.
+It's up to you would you consume everything in I<@$log>,
+complete entries (with empty-line separtors), or
+only first complete entry --
+B<_read> doesn't care.
+In either case, you may be sure if B<_read> returns clean (see below) there's
+at least one compelte entry.
+
+=item child has timeouted
 
 If child timeouts, then I<$ALRM_error> is set
 (to TRUE, otherwise meaningles).
-Then finishes.
+Technically speaking a method just has nothing to say.
+It's up to caller to decide what to do
+(and it's caller's fault that there was attempt to get entry while there was
+no reason to be any).
+Anyway, I<$ALRM_error> is forced to be FALSE upon entering B<select> loop.
 
 (I<v0.0.8>)
 And more about what timeout is.
@@ -984,12 +994,14 @@ If any callback returns C<undef> then fails entirely.
 
 =back
 
-=item child exits
+=item child has exited
 
-The child is B<waitpid>ed, then I<$CHLD_error> is set,
-then finishes.
+The child is B<waitpid>ed and then I<$CHLD_error> is set.
+It's possible that's normal for child to exit --
+it's up to caller to decide.
+Anyway, after child has exited there's nothing to B<read> from.
 
-=item unknown error
+=item unknown error has happened
 
 (I<v.0.1.4>)
 It used to be read-with-alarm-in-eval.
@@ -1020,8 +1032,10 @@ sub _read {
         elsif( @line = $self->{me}->getlines             )        {
             chomp @line;
             push @{$self->{log}}, @line;
-# XXX: Trust no-one...
-            $line[-1] eq ''                               and last }
+# WORKAROUND:201404232105:whynot: If method goes insane and bursts in one+ properly empty line separated messages then the separating empty line could got lost between.
+# XXX:201404232106:whynot: That's F<t/v-method> what does it, AAMF.
+# http://www.cpantesters.org/cpan/report/b19908e8-c870-11e3-aee5-9ca1c294a800
+            grep $_ eq '', @line                          and last }
         elsif( $self->{me}->eof                          )        {
             waitpid delete $self->{pid}, 0;
             $self->{CHLD_error} = $?;                         last }
@@ -1118,7 +1132,7 @@ properly -- those are communicated back (somehow).
 
 =over
 
-=item (%s): candiate to pass in neither CODE nor (undef)
+=item (%s): candiate to pass is neither CODE nor (undef)
 
 B<(fatal)>
 In L</set_callback()>.

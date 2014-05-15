@@ -17,7 +17,9 @@ OVERVIEW
 
   File::AptFetch
       POD of the module.  Covers API and provides examples of intended
-      usage.  (bug) It's underdeveloped yet.
+      usage.  It's development is kind of dead (unless APT methods API
+      would change dramatically) -- any additions are in support for
+      File::AptFetch::Simple.
 
   File::AptFetch::Cookbook
       Provides some useful, I believe, findings on each method behaviour
@@ -26,20 +28,38 @@ OVERVIEW
       undocumented completely.  (bug) My knowledge of APT methods is
       very irregular, so is F::AF::C.
 
+  File::AptFetch::Simple
+      That's what you should look into for doing all kinds of stuff. 
+      (bug) It still lacks some functionality.
+
 RUN-TIME REQUIREMENTS
 
   Perl
-      v.5.8.0 or later.  Look, v.5.6.2 is "woody".  Eight years ago. 
-      You must be kidding.
+      *v5.8.0* or later.  Look, *v5.6.2* is "woody", 20031114.  You must
+      be kidding.
+
+  base
+  Carp
+  Cwd Any version.  Distributed with Perl itself.
 
   IO::Pipe
-      Any version.  It's distributed with Perl itself.  In core since
-      v.5.3.7, predates debian, BTW.
+      Any version.  It's distributed with Perl itself too.  In core
+      since *v5.3.7*, predates debian, BTW.
+
+  String::Truncate
+      Required by File::AptFetch::Simple.  *v0.5* looks OK.
+
+  version
+      *v0.77*.  CPAN doesn't remember when *v0.50* has been released. 
+      Required version has been upgraded in fruitles attempt to fix some
+      FTBFSes.  Introduced more breakage.  Stayed.
 
 BUILD-TIME REQUIREMENTS
 
+  File::Temp
+  POSIX
   Test::More
-      Any version.  Should be distributed with Perl itself too.
+      Any version.  Should be distributed with Perl itself.
 
 BUILD-TIME CONFIGURATION
 
@@ -65,13 +85,19 @@ BUILD-TIME CONFIGURATION
       *(v0.1.6)* These are closely related.  From now on, *timeout*
       keeps the same semantics as before (it's time to cut-off) but is
       handled differently.  F::AF object sleeped (literally) for time
-      set.  Now it selects (with magic)in *tick*s.  (It's introduced for
-      sake of F::AF::S.)
+      set.  Now it selects (with magic) in *tick*s.  (It's introduced
+      for sake of F::AF::S.)
 
       Also.  Both must be naturals; They're in seconds; *tick* is
       supposed to be couple of seconds (default: 5sec); While *timeout*
       is supposed to be large enough (default: 2min) in respect to
       network introduced delays.
+
+  *beat*
+  *wink*
+      *(v0.1.9)* *(F::AF::S -- v0.1.4)* Those two are for
+      File::AptFetch::Simple (what has more) -- control progress
+      indication.
 
 TEST-SUITE
 

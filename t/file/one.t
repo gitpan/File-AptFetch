@@ -1,4 +1,4 @@
-# $Id: one.t 498 2014-04-02 19:19:15Z whynot $
+# $Id: one.t 501 2014-05-14 22:19:48Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.3 );
+use version 0.77; our $VERSION = version->declare( v0.1.4 );
 
 use t::TestSuite qw| :temp :mthd :diag |;
 use File::AptFetch;
@@ -54,10 +54,10 @@ like $faf->{message}{last_modified}, qr(\d{1,2} \w{3} \d{4} [0-9:]{8}),
 FAFTS_show_message %{$faf->{message}};
 is_deeply
 { rc => $rv, stderr => $serr, status => $faf->{Status},
-                  md5hash => $faf->{message}{md5_hash}                     },
-{ rc => q|(file): timeouted without responce|, stderr => '', status => 201,
-                            md5hash => q|5eb986e6affbe6f32f88638e7e3af63d| },
-                                                            q|then timeouts|;
+                  md5hash => $faf->{message}{md5_hash}    },
+{ rc => q|(file): timeouted|, stderr => '', status => 201,
+           md5hash => q|5eb986e6affbe6f32f88638e7e3af63d| },
+                                           q|then timeouts|;
 
 $fsrc = FAFTS_tempfile
   nick => q|ftag9a2f|, $dir => $dir, content => q|file one bravo|;

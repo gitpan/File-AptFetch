@@ -1,4 +1,4 @@
-# $Id: Simple.pm 499 2014-04-19 19:24:45Z whynot $
+# $Id: Simple.pm 501 2014-05-14 22:19:48Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,11 +7,12 @@ use strict;
 use warnings;
 
 package File::AptFetch::Simple;
-use version 0.77; our $VERSION = version->declare( v0.1.3 );
+use version 0.77; our $VERSION = version->declare( v0.1.4 );
 use base qw| File::AptFetch |;
 
 use Carp;
-use Cwd qw| abs_path |;
+use Cwd              qw| abs_path |;
+use String::Truncate qw|    elide |;
 
 =head1 NAME
 
@@ -99,14 +100,26 @@ In detail description of I<@uris> a bit later.
 
 =item I<%options>
 
+Unless explicitly noted:
+any option used in C<cCM> sets defaults for this instance;
+any option used in C<cUM> sets for this invocation.
+
 =over
+
+=item I<$options{beat}>
+
+(optional, TRUE.)
+That's the first progress reporting option --
+this one is user-friendly.
+B<(note)>
+It's totally underdeveloped right now -- nothing to document yet.
+B<(bug)>
+Default should depend on I<STDERR> being visible in terminal.
 
 =item I<$options{location}>
 
-Optional.
-Defaults to CWD.
+(optional, CWD.)
 Sets dirname where acquired file will be placed.
-Set in cUM leaves set in cCM (if any) intact.
 
 B<(caveat)>
 When applied I<$options{location}> will be expanded to be absolute
@@ -144,6 +157,16 @@ F</etc/apt/sources.list>
 But there's no URI of C<copy:> type,
 you should do that substitution yourself.
 Else B<F::AF::S> could do it for you.
+
+=item I<$options{wink}>
+
+(optional, TRUE.)
+That's the second progress reporting option --
+this one is log-friendly.
+Overwrites I<$options{beat}>'s output (unless I<$options{beat}> is disabled).
+Tries to be terminal saving too.
+B<(bug)>
+Should actually detect if there's any terminal on I<STDERR>.
 
 =back
 
@@ -228,7 +251,7 @@ Should dump the damn message.
 
 =cut
 
-my %stat;
+my %stat = ( mark => time );
 sub request {
     my( $class, $args, @subj ) = @_;
     my $self;
@@ -242,7 +265,10 @@ sub request {
         $self = File::AptFetch->init( $method );
         ref $self                                              or croak $self;
         bless $self, $class;
-        $self->{location} = $args->{location}              }
+        $self->{wink} = !!$args->{wink}              if defined $args->{wink};
+        $self->{beat} = !!$args->{beat}              if defined $args->{beat};
+# FIXME:201405040354:whynot: Here F<0> has to be handled too.
+        $self->{location} = $args->{location} || '.'              }
     else                                                  {
         $self = $class;
         if( $args && q|HASH| ne ref $args )  {
@@ -251,7 +277,20 @@ sub request {
             $args = { }                       }            }
 
 # FIXME:201404012258:whynot: Must handle F<0> specially.
-    my $loc = abs_path $args->{location} || $self->{location} || '.';
+    my $loc = abs_path $args->{location} || $self->{location};
+# TODO:201405020116:whynot: I<v5.12> is just behind the corner, you know.
+# TODO:201405120124:whynot: Both should check for C<-t STDERR>.
+    my $wink =
+      defined $args->{wink} ? $args->{wink} :
+      defined $self->{wink} ? $self->{wink} :
+      File::AptFetch::ConfigData->config( q|wink| );
+    my $beat =
+      defined $args->{beat} ? $args->{beat} :
+      defined $self->{beat} ? $self->{beat} :
+      File::AptFetch::ConfigData->config( q|beat| );
+
+# XXX:201405112010:whynot: That's just going to blow in your face.
+    $self->{cheat_beat} = $beat ? "\r" : '';
     my $rv = $self->SUPER::request( map  {
         my $src = $_;
         $src =~ s{^file:}{copy:};
@@ -259,37 +298,75 @@ sub request {
         qq|$loc/$bnam| => { uri => $src } } @subj );
     $rv                                                         and croak $rv;
 
-    while( %{$self->{trace}} )                                      {
+    while( %{$self->{trace}} ) {
         $rv = $self->SUPER::gain;
         $rv                                                     and croak $rv;
-        if( grep $self->{Status} == $_, qw| 201 400 401 402 403 |) {
-            my $fn = $self->{message}{uri};
-            unless( $fn                 )                                 {
+        my $fn = $self->{message}{uri};
+        unless( $fn                 )                                 {
 # TODO:201403302300:whynot: Not in test-suite.
 # TODO:201403302300:whynot: Additional diagnostics is missing.
-                carp qq|got ($self->{status}) without {URI:}|;        next }
-            elsif( !$self->{trace}{$fn} )                                 {
+            carp qq|got ($self->{status}) without {URI:}|;        next }
+        elsif( !$self->{trace}{$fn} )                                 {
 # TODO:201403221929:whynot: Not in test-suite.
-                carp qq|got ($self->{status}) for ($fn) without [request]| }
-            else                                                          {
-                print qq|($fn): ($self->{status})\n|                       }
-            delete $self->{trace}{$fn}                              }}
+            carp qq|got ($self->{status}) for ($fn) without [request]| }
+        my $fnm = elide $fn, 25, { truncate => q|left| };
+        if( grep $self->{Status} == $_, qw| 201 400 401 402 403 |) {
+            delete $self->{trace}{$fn}                              }
+        print STDERR qq|$self->{cheat_beat}($fnm): ($self->{status})\n|      if
+          $wink                 }
+    delete $self->{cheat_beat};
        $self }
 
 =item B<_read_callback()>
 
-# TODO:
+This does all required sampling for L</B<_select_callback()>>.
+Routine for L<B<_read>|File::AptFetch/_read> is provided by
+L<parent's callback|File::AptFetch/_read_callback>.
 
 =cut
 
 sub _read_callback {
     my $rec = shift;
     my $rv = File::AptFetch::_read_callback $rec;
-    my $diff = $rec->{size} && $rec->{back} ? $rec->{size} - $rec->{back} : 0;
-    $stat{inc} += $diff                                          if $diff > 0;
+    if( $rv )            {
+        my $diff = defined $rec->{size} && defined $rec->{back} ?
+                                    $rec->{size} - $rec->{back} : 0;
+        $stat{inc} += $diff                                      if $diff > 0;
+        $stat{activity}++ }
                 $rv }
 
-File::AptFetch::set_callback read => \&_read_callback;
+=item B<_select_callback()>
+
+This one does actual beat indicator.
+Unless forbidden (I<beat> of I<%opts> of L</B<request()>>) then harmless.
+
+=cut
+
+my @marks = qw| b K M G T P E Z Y |;
+my @void = qw| - - - - + |;
+
+sub _select_callback                {
+    my $faf = shift;
+    $faf->{cheat_beat}              or return delete @stat{qw| inc activity |};
+    my $sm;
+    my $mark = time - $stat{mark} || 1;
+    unless( exists $stat{inc} || $stat{activity} )       {
+        $sm = q|{{{ NOTHING HAPPENING!!! }}}|             }
+    elsif( !$stat{inc} && $stat{activity} )              {
+        unshift @void, pop @void;
+        $sm = sprintf q|[%sX/s]|, join '', @void          }
+    else                                                 {
+        my $fix = 0;
+        $fix++                                   until 100 > sprintf q|%5.2f|,
+          $stat{inc} / $mark / 1024 ** $fix;
+        $sm = sprintf q|[%5.2f%s/s]|,
+          $stat{inc} / $mark / 1024 ** $fix, $marks[$fix] }
+    print STDERR qq|$faf->{cheat_beat}$sm |;
+    $stat{mark} = time;
+    delete @stat{qw| inc activity |} }
+
+File::AptFetch::set_callback
+  read => \&_read_callback, select => \&_select_callback;
 
 =back
 

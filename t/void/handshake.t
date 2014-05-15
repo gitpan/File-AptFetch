@@ -1,4 +1,4 @@
-# $Id: handshake.t 490 2014-01-26 18:44:36Z whynot $
+# $Id: handshake.t 501 2014-05-14 22:19:48Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,13 +7,14 @@ use strict;
 use warnings;
 
 package main;
-use version 0.50; our $VERSION = qv q|0.1.1|;
+use version 0.77; our $VERSION = version->declare( v0.1.2 );
 
 use t::TestSuite qw| :temp :mthd |;
 use File::AptFetch;
 use Test::More;
 
 File::AptFetch::ConfigData->set_config( timeout => 10 );
+File::AptFetch::ConfigData->set_config( tick    =>  1 );
 
 my $Apt_Lib = t::TestSuite::FAFTS_discover_lib;
 plan !defined $Apt_Lib                        ?
@@ -54,7 +55,7 @@ $method = FAFTS_tempfile nick => q|mtag6d9d|, dir => $arena;
 chmod 0755, $method;
 $method = ( split m{/}, $method )[-1];
 $rv = FAFTS_wrap { File::AptFetch->init( $method ) };
-like $rv, qr{^\Q($method): timeouted without handshake}sm,
+like $rv, qr{^\Q($method): (0): died without handshake}sm,
   q|F::AF->init fails with empty executable|;
 
 FAFTS_prepare_method
@@ -62,7 +63,7 @@ FAFTS_prepare_method
   q|x-method|, $stderr, q|25|;
 $method = ( split qr{/}, $method )[-1];
 ( $rv, $serr ) = FAFTS_wrap { File::AptFetch->init( $method ) };
-like $rv, qr{^\Q($method): timeouted without handshake}sm,
+like $rv, qr{^\Q($method): (0): died without handshake}sm,
   q|F::AF->init fails with bogus executable|;
 
 File::AptFetch::_uncache_configuration;

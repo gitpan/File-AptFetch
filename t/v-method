@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: v-method 498 2014-04-02 19:19:15Z whynot $
+# $Id: v-method 501 2014-05-14 22:19:48Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -8,7 +8,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.1 );
+use version 0.77; our $VERSION = version->declare( v0.1.2 );
 
 use IO::Handle;
 
@@ -19,6 +19,9 @@ chomp $fn;
 open STDERR, q|>>|, $fn                        or die qq|[open] (STDERR): $!|;
 my $tout = <DATA>;
 chomp $tout;
+$tout = [ split m{:}, $tout, 2 ];
+my $rv = $tout->[1] || 0;
+$tout = $tout->[0];
 
 my $self = ( split m{/}, $0 )[-1] . ':';
 foreach my $line
@@ -33,9 +36,11 @@ while( <DATA> )          {
     print STDOUT qq|$_\n| }
 
 my $mark = time;
-while( <STDIN> )                 {
+$SIG{ALRM} = sub { exit $rv };
+alarm $tout;
+while( <STDIN> )                     {
     chomp;
     print STDERR qq|{$_}\n|;
-    time - $mark > $tout and exit }
+    time - $mark > $tout and exit $rv }
 
 # vim: set filetype=perl

@@ -1,3 +1,12 @@
+  v0.1.9 20140515
+
+      *   Progress exposing route has been made through.  Adding options
+          (*$beat* and *$wink*) to control it.  Adding *requires*
+          (String::Truncate) to support it.
+
+      *   Attempt to fix any-random-nix-but-mostly-linux FTBFSes (race)
+          (probably won't fix anything, read -- introducing new).
+
   v0.1.8 20140419
 
       *   Adding *select* callback (*gain* callback looks useless now)

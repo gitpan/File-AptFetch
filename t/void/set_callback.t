@@ -1,4 +1,4 @@
-# $Id: set_callback.t 499 2014-04-19 19:24:45Z whynot $
+# $Id: set_callback.t 501 2014-05-14 22:19:48Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.3 );
+use version 0.77; our $VERSION = version->declare( v0.1.4 );
 
 use t::TestSuite qw| :temp :mthd :file :diag |;
 use File::AptFetch;
@@ -101,7 +101,7 @@ is $serr, '', q|tag+1328 {STDERR} is empty|;
 is_deeply { rv => $rv, stderr => $serr }, { rv => '', stderr => '' },
   q|tag+49bc [request]|;
 ( $rv, $serr ) = FAFTS_wrap { $faf->gain };
-like $rv, qr{timeouted without responce}, q|clears [read] callback|;
+like $rv, qr{timeouted$}, q|clears [read] callback|;
 undef $faf;
 like FAFTS_get_file $stderr, qr{600 URI Acquire},
   q|tag+5875 {STDERR} is empty|;
@@ -124,7 +124,7 @@ is_deeply { rv => $rv, stderr => $serr }, { rv => '', stderr => '' },
 ( $rv, $serr ) = FAFTS_wrap { $faf->gain };
 is_deeply [ $rv, $serr ], [ '', '' ], q|[gain]|;
 ( $rv, $serr ) = FAFTS_wrap { $faf->gain };
-like $rv, qr{timeouted without responce}, q|clears [gain] callback|;
+like $rv, qr{timeouted$}, q|clears [gain] callback|;
 undef $faf;
 like FAFTS_get_file $stderr, qr{600 URI Acquire},
   q|tag+656e {STDERR} is empty|;
@@ -161,7 +161,7 @@ is $serr, '', q|tag+ea68 {STDERR} is empty|;
 is_deeply { rv => $rv, stderr => $serr }, { rv => '', stderr => '' },
   q|tag+6f22 [request]|;
 ( $rv, $serr ) = FAFTS_wrap { $faf->gain };
-like $rv, qr{timeouted without responce}, q|clears [select] callback|;
+like $rv, qr{timeouted$}, q|clears [select] callback|;
 is $serr, '', q|tag+2b73 {STDERR} is empty|;
 undef $faf;
 like FAFTS_get_file $stderr, qr{600 URI Acquire},

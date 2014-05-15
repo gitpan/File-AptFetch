@@ -1,10 +1,10 @@
-# $Id: Build.PL 498 2014-04-02 19:19:15Z whynot $
+# $Id: Build.PL 501 2014-05-14 22:19:48Z whynot $
 
 use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.7 );
+use version 0.77; our $VERSION = version->declare( v0.1.8 );
 
 use Module::Build 0.28;
 
@@ -36,7 +36,9 @@ Further reading:
 
 POD of the module.
 Covers API and provides examples of intended usage.
-B<(bug)> It's underdeveloped yet.
+It's development is kind of dead 
+(unless APT methods API would change dramatically) --
+any additions are in support for B<File::AptFetch::Simple>.
 
 =item B<File::AptFetch::Cookbook>
 
@@ -46,6 +48,11 @@ Look, APT methods API documentation is quite outdated.
 Each method is undocumented completely.
 B<(bug)> My knowledge of APT methods is very irregular, so is B<F::AF::C>.
 
+=item B<File::AptFetch::Simple>
+
+That's what you should look into for doing all kinds of stuff.
+B<(bug)> It still lacks some functionality.
+
 =back
 
 =head1 RUN-TIME REQUIREMENTS
@@ -54,16 +61,37 @@ B<(bug)> My knowledge of APT methods is very irregular, so is B<F::AF::C>.
 
 =item B<Perl>
 
-B<v.5.8.0> or later.
-Look, B<v.5.6.2> is C<woody>.
-Eight years ago.
+I<v5.8.0> or later.
+Look, I<v5.6.2> is C<woody>, 20031114.
 You must be kidding.
+
+=item B<base>
+
+=item B<Carp>
+
+=item B<Cwd>
+
+Any version.
+Distributed with Perl itself.
 
 =item B<IO::Pipe>
 
 Any version.
-It's distributed with Perl itself.
-In core since B<v.5.3.7>, predates debian, BTW.
+It's distributed with Perl itself too.
+In core since I<v5.3.7>, predates debian, BTW.
+
+=item B<String::Truncate>
+
+Required by B<File::AptFetch::Simple>.
+I<v0.5> looks OK.
+
+=item B<version>
+
+I<v0.77>.
+CPAN doesn't remember when I<v0.50> has been released.
+Required version has been upgraded in fruitles attempt to fix some FTBFSes.
+Introduced more breakage.
+Stayed.
 
 =back
 
@@ -71,10 +99,14 @@ In core since B<v.5.3.7>, predates debian, BTW.
 
 =over
 
+=item B<File::Temp>
+
+=item B<POSIX>
+
 =item B<Test::More>
 
 Any version.
-Should be distributed with Perl itself too.
+Should be distributed with Perl itself.
 
 =back
 
@@ -85,21 +117,22 @@ my $builder = Module::Build->new(
   dist_author          =>     q|Eric Pozharski <whynot@cpan.org>|,
   dist_version_from    =>                      q|lib/AptFetch.pm|,
   sign                 =>                                       1,
-# TODO:201402091303:whynot: B<Software::License> support has been added to B<M::B> I<0.36_14>, so 20100822, so B<perl> I<5.12.2>, so B<version> I<0.83>
-# FIXME:201403172218:whynot: Nothing to do with B<CPAN::Meta>.  B<Module::Build> insists on backward compatibility.  Thus C<LGPL_3_0> becomes C<lgpl>, what in turn becomes C<LGPL_2_0>.  Unconitionally.
+# TODO:201402091303:whynot: B<Software::License> support has been added to B<M::B> I<v0.36_14>, so 20100822, so B<perl> I<v5.12.2>, so B<version> I<v0.83>
+# FIXME:201403172218:whynot: Nothing to do with B<CPAN::Meta>.  B<Module::Build> insists on backward compatibility.  Thus C<LGPL_3_0> becomes C<lgpl>, what in turn becomes C<LGPL_2_0>.  Unconditionally.
   license              =>                          q|open_source|,
   meta_merge           => { resources =>
   { license =>     q|http://www.gnu.org/licenses/lgpl-3.0.txt| }},
   requires             =>
-  { perl        => qv v5.8.0,
+  { perl                => qv v5.8.0,
 # FIXME:201404020142:whynot: How?
 # http://www.cpantesters.org/cpan/report/4343e344-af71-11e3-b3f2-e50c8806f0e4
-    version     =>  qv v0.77,
-# FIXME:201404020128:whynot: Go B<parent> as soon as B<perl> >= C<v5.10.1>
-    base        =>        '',
-    Carp        =>        '',
-    Cwd         =>        '',
-    q|IO::Pipe| =>        ''                                    },
+    version             =>  qv v0.77,
+# FIXME:201404020128:whynot: Go B<parent> as soon as B<perl> >= I<v5.10.1>
+    base                =>        '',
+    Carp                =>        '',
+    Cwd                 =>        '',
+    q|IO::Pipe|         =>        '',
+    q|String::Truncate| =>        ''                            },
   build_requires       =>
   { q|Test::More| => '',    q|File::Temp| => '',    POSIX => '' },
   recursive_test_files =>                                       1,
@@ -165,7 +198,7 @@ I<timeout> keeps the same semantics as before
 (it's time to cut-off)
 but is handled differently.
 B<F::AF> object B<sleep>ed (literally) for time set.
-Now it B<select>s (with magic)in I<tick>s.
+Now it B<select>s (with magic) in I<tick>s.
 (It's introduced for sake of B<F::AF::S>.)
 
 Also.
@@ -175,14 +208,27 @@ I<tick> is supposed to be couple of seconds (default: 5sec);
 While I<timeout> is supposed to be large enough (default: 2min) in respect to
 network introduced delays.
 
-=back
-
 =cut
 
 $builder->config_data( timeout => 120 );
 $builder->config_data( tick    =>   5 );
 
+=item I<beat>
+
+=item I<wink>
+
+I<(v0.1.9)> I<(B<F::AF::S> -- v0.1.4)>
+Those two are for L<B<File::AptFetch::Simple>> (what has more) --
+control progress indication.
+
+=cut
+
+$builder->config_data( beat => !0 );
+$builder->config_data( wink => !0 );
+
 $builder->create_build_script( );
+
+=back
 
 =head1 TEST-SUITE
 

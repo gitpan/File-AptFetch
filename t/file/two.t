@@ -1,4 +1,4 @@
-# $Id: two.t 498 2014-04-02 19:19:15Z whynot $
+# $Id: two.t 501 2014-05-14 22:19:48Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.5 );
+use version 0.77; our $VERSION = version->declare( v0.1.6 );
 
 use t::TestSuite qw| :temp :mthd :diag |;
 use File::AptFetch;
@@ -106,10 +106,10 @@ $done = $faf->{message}{md5_hash};
 FAFTS_show_message %{$faf->{message}};
 is_deeply
 { rc => $rv, stderr => $serr, status => $faf->{Status},
-                  md5hash => $faf->{message}{md5_hash}                     },
-{ rc => q|(file): timeouted without responce|, stderr => '', status => 201,
-                                                          md5hash => $done },
-                                                            q|then timeouts|;
+                  md5hash => $faf->{message}{md5_hash}    },
+{ rc => q|(file): timeouted|, stderr => '', status => 201,
+                                         md5hash => $done },
+                                           q|then timeouts|;
 
 $fsra = FAFTS_tempfile
   nick => q|ftag6ac5|, dir => $dir, content => q|file two echo|;

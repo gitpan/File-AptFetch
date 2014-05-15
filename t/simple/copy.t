@@ -1,4 +1,4 @@
-# $Id: copy.t 498 2014-04-02 19:19:15Z whynot $
+# $Id: copy.t 501 2014-05-14 22:19:48Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.2 );
+use version 0.77; our $VERSION = version->declare( v0.1.3 );
 
 use t::TestSuite qw| :mthd :temp :file |;
 use File::AptFetch::Simple;
@@ -15,6 +15,8 @@ use Test::More;
 
 File::AptFetch::ConfigData->set_config( timeout => 10 );
 File::AptFetch::ConfigData->set_config( tick    =>  1 );
+File::AptFetch::ConfigData->set_config( wink    => !1 );
+File::AptFetch::ConfigData->set_config( beat    => !1 );
 
 my $Apt_Lib = t::TestSuite::FAFTS_discover_lib;
 plan

@@ -1,10 +1,10 @@
-# $Id: Build.PL 501 2014-05-14 22:19:48Z whynot $
+# $Id: Build.PL 502 2014-05-16 23:10:47Z whynot $
 
 use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.8 );
+use version 0.77; our $VERSION = version->declare( v0.1.9 );
 
 use Module::Build 0.28;
 
@@ -123,16 +123,18 @@ my $builder = Module::Build->new(
   meta_merge           => { resources =>
   { license =>     q|http://www.gnu.org/licenses/lgpl-3.0.txt| }},
   requires             =>
-  { perl                => qv v5.8.0,
+# XXX:201405170202:whynot: Is there something not *that* long standing left?
+# http://www.cpantesters.org/cpan/report/98753292-dd38-11e3-9f96-e4d5e82f99b1
+  { perl                => qv( v5.8.0 ),
 # FIXME:201404020142:whynot: How?
 # http://www.cpantesters.org/cpan/report/4343e344-af71-11e3-b3f2-e50c8806f0e4
-    version             =>  qv v0.77,
+    version             =>  qv( v0.77 ),
 # FIXME:201404020128:whynot: Go B<parent> as soon as B<perl> >= I<v5.10.1>
-    base                =>        '',
-    Carp                =>        '',
-    Cwd                 =>        '',
-    q|IO::Pipe|         =>        '',
-    q|String::Truncate| =>        ''                            },
+    base                =>           '',
+    Carp                =>           '',
+    Cwd                 =>           '',
+    q|IO::Pipe|         =>           '',
+    q|String::Truncate| =>           ''                         },
   build_requires       =>
   { q|Test::More| => '',    q|File::Temp| => '',    POSIX => '' },
   recursive_test_files =>                                       1,

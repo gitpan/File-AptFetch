@@ -1,4 +1,4 @@
-# $Id: AptFetch.pm 501 2014-05-14 22:19:48Z whynot $
+# $Id: AptFetch.pm 502 2014-05-16 23:10:47Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use warnings;
 use strict;
 
 package File::AptFetch;
-use version 0.77; our $VERSION = version->declare( v0.1.9 );
+use version 0.77; our $VERSION = version->declare( v0.1.10 );
 
 use File::AptFetch::ConfigData;
 use Carp;

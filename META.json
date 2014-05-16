@@ -28,14 +28,20 @@
       },
       "runtime" : {
          "requires" : {
-            "perl" : "v5.8.0"
+            "Carp" : 0,
+            "Cwd" : 0,
+            "IO::Pipe" : 0,
+            "String::Truncate" : 0,
+            "base" : 0,
+            "perl" : "v5.8.0",
+            "version" : "v0.77.0"
          }
       }
    },
    "provides" : {
       "File::AptFetch" : {
          "file" : "lib/AptFetch.pm",
-         "version" : "v0.1.9"
+         "version" : "v0.1.10"
       },
       "File::AptFetch::Simple" : {
          "file" : "lib/Simple.pm",
@@ -48,5 +54,5 @@
          "http://www.gnu.org/licenses/lgpl-3.0.txt"
       ]
    },
-   "version" : "v0.1.9"
+   "version" : "v0.1.10"
 }

@@ -46,6 +46,10 @@ RUN-TIME REQUIREMENTS
       Any version.  It's distributed with Perl itself too.  In core
       since *v5.3.7*, predates debian, BTW.
 
+  List::Util
+      Required by File::AptFetch::Simple for doing some gibberish. 
+      *v1.03* shall be enough.  Distributed with Perl itself.
+
   String::Truncate
       Required by File::AptFetch::Simple.  *v0.5* looks OK.
 

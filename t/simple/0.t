@@ -1,4 +1,4 @@
-# $Id: 0.t 501 2014-05-14 22:19:48Z whynot $
+# $Id: 0.t 505 2014-06-12 20:42:49Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.3 );
+use version 0.77; our $VERSION = version->declare( v0.1.4 );
 
 use t::TestSuite qw| :mthd :temp |;
 use File::AptFetch::Simple;
@@ -307,5 +307,9 @@ is_deeply { rv => qq|$fafs|,               give_got,
   ew => !1, vw => !1,
   eb => !1, vb => !1                                },
                                    q|tag+f4e5 deeply|;
+
+# XXX:201406062046:whynot: Just a usual undef-trick.
+# http://www.cpantesters.org/cpan/report/42366dee-ddfe-11e3-b06d-4e4e11ab0dd0
+undef $fafs; $fafs = !1;
 
 # vim: syntax=perl

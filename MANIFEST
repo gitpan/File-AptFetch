@@ -29,9 +29,11 @@ t/select-callback/simple.t
 t/simple/0.t
 t/simple/copy.t
 t/simple/fail.t
+t/simple/wink.t
 t/TestSuite.pm
 t/v-method
 t/visual/copy.pl
+t/visual/ftp.pl
 t/visual/TestSuite.pm
 t/void/aptconfig.t
 t/void/configure.t

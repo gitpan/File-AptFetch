@@ -1,10 +1,10 @@
-# $Id: Build.PL 502 2014-05-16 23:10:47Z whynot $
+# $Id: Build.PL 505 2014-06-12 20:42:49Z whynot $
 
 use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.9 );
+use version 0.77; our $VERSION = version->declare( v0.1.10 );
 
 use Module::Build 0.28;
 
@@ -55,6 +55,8 @@ B<(bug)> It still lacks some functionality.
 
 =back
 
+=cut
+
 =head1 RUN-TIME REQUIREMENTS
 
 =over
@@ -80,6 +82,12 @@ Any version.
 It's distributed with Perl itself too.
 In core since I<v5.3.7>, predates debian, BTW.
 
+=item B<List::Util>
+
+Required by B<File::AptFetch::Simple> for doing some gibberish.
+I<v1.03> shall be enough.
+Distributed with Perl itself.
+
 =item B<String::Truncate>
 
 Required by B<File::AptFetch::Simple>.
@@ -94,6 +102,8 @@ Introduced more breakage.
 Stayed.
 
 =back
+
+=cut
 
 =head1 BUILD-TIME REQUIREMENTS
 
@@ -134,7 +144,8 @@ my $builder = Module::Build->new(
     Carp                =>           '',
     Cwd                 =>           '',
     q|IO::Pipe|         =>           '',
-    q|String::Truncate| =>           ''                         },
+    q|String::Truncate| =>           '',
+    q|List::Util|       =>           ''                         },
   build_requires       =>
   { q|Test::More| => '',    q|File::Temp| => '',    POSIX => '' },
   recursive_test_files =>                                       1,
@@ -228,9 +239,11 @@ control progress indication.
 $builder->config_data( beat => !0 );
 $builder->config_data( wink => !0 );
 
-$builder->create_build_script( );
-
 =back
+
+=cut
+
+$builder->create_build_script( );
 
 =head1 TEST-SUITE
 
@@ -265,6 +278,8 @@ Meanwhile F<t/void/*.t> enables some cute workaround, that would provide
 all needed C<apt-config(1)> functionality without that executable itself.
 (Just in case on that platform there will be Debian some day.)
 But we still stay within POSIX world -- no future outside.
+
+=cut
 
 =head1 AVAILABILITY
 

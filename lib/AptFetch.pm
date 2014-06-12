@@ -1,4 +1,4 @@
-# $Id: AptFetch.pm 502 2014-05-16 23:10:47Z whynot $
+# $Id: AptFetch.pm 505 2014-06-12 20:42:49Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use warnings;
 use strict;
 
 package File::AptFetch;
-use version 0.77; our $VERSION = version->declare( v0.1.10 );
+use version 0.77; our $VERSION = version->declare( v0.1.11 );
 
 use File::AptFetch::ConfigData;
 use Carp;
@@ -353,10 +353,17 @@ Refer to B<File::AptFetch::ConfigData> for details.
 
 sub DESTROY                       {
     my $self = shift;
-    if( $self->{pid} )                                            {
-        local $SIG{PIPE} = q|IGNORE|;
-        kill File::AptFetch::ConfigData->config( q|signal| ) => $self->{pid}
-          or carp qq|[kill] ($self->{pid}): nothing to kill or $!| }
+# http://www.cpantesters.org/cpan/report/f55f934e-e292-11e3-84c4-fc77f9652e90 - 3
+# http://www.cpantesters.org/cpan/report/2b538b74-e25f-11e3-84c4-fc77f9652e90 - 1
+# http://www.cpantesters.org/cpan/report/685fd35c-e196-11e3-84c4-fc77f9652e90 - 2
+# http://www.cpantesters.org/cpan/report/150e44ca-e166-11e3-84c4-fc77f9652e90 - 3
+# http://www.cpantesters.org/cpan/report/8eca3532-e100-11e3-84c4-fc77f9652e90 - 6
+# http://www.cpantesters.org/cpan/report/97267764-e0cd-11e3-84c4-fc77f9652e90 - 1
+# http://www.cpantesters.org/cpan/report/857323ca-dff9-11e3-84c4-fc77f9652e90 - 6
+# http://www.cpantesters.org/cpan/report/cc12e132-df4d-11e3-84c4-fc77f9652e90 - 1
+    local $SIG{PIPE} = q|IGNORE|;
+    kill File::AptFetch::ConfigData->config( q|signal| ) => $self->{pid}    or
+      carp qq|[kill] ($self->{pid}): nothing to kill or $!|   if $self->{pid};
     close $self->{me} or carp qq|[close] (reader): $!|         if $self->{me};
     close $self->{it} or carp qq|[close] (writer): $!|         if $self->{it};
     waitpid $self->{pid}, 0                                   if $self->{pid};

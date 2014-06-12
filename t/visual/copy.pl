@@ -1,4 +1,4 @@
-# $Id: copy.pl 501 2014-05-14 22:19:48Z whynot $
+# $Id: copy.pl 505 2014-06-12 20:42:49Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,9 +7,9 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.1 );
+use version 0.77; our $VERSION = version->declare( v0.1.2 );
 
-use t::TestSuite qw| :temp :mthd :diag |;
+use t::TestSuite qw| :temp :mthd |;
 use t::visual::TestSuite;
 use File::AptFetch::Simple;
 
@@ -83,9 +83,6 @@ $gopts{beat} = $opts{global}{beat}              if exists $opts{global}{beat};
 $lopts{wink} = $opts{local}{wink}                if exists $opts{local}{wink};
 $lopts{beat} = $opts{local}{beat}                if exists $opts{local}{beat};
 $TS_Conf->{copy_slow}{source}{size} /= 8;
-
-File::AptFetch::ConfigData->set_config( timeout => 10 );
-File::AptFetch::ConfigData->set_config( tick    =>  1 );
 
 $dsrc = FAFTS_tempdir
   nick => q|dtag9b89|, dir => $TS_Conf->{copy_slow}{source}{dir};

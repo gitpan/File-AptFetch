@@ -1,4 +1,4 @@
-# $Id: TestSuite.pm 499 2014-04-19 19:24:45Z whynot $
+# $Id: TestSuite.pm 505 2014-06-12 20:42:49Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -10,8 +10,10 @@ package DB;
 sub get_fork_TTY { xterm_get_fork_TTY() }
 
 package t::TestSuite;
-use version 0.77; our $VERSION = version->declare( v0.1.6 );
-use parent qw| Exporter |;
+use version 0.77; our $VERSION = version->declare( v0.1.7 );
+# TODO:201406091242:whynot: Go B<parent()> whenever possible (perl v5.10.0 or something).
+# http://www.cpantesters.org/cpan/report/5947de70-df50-11e3-a498-53c68706f0e4
+use base   qw| Exporter |;
 use lib     q|./blib/lib|;
 
 use Carp;

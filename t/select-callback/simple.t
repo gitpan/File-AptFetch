@@ -1,4 +1,4 @@
-# $Id: simple.t 501 2014-05-14 22:19:48Z whynot $
+# $Id: simple.t 505 2014-06-12 20:42:49Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -15,7 +15,7 @@ sub request    {
     my $self = { };
     $self->{trace} = $args;
     $self->{pid} = -1;
-    $self->{cheat_beat}++;
+    $self->{cheat_beat} = q|tag-b29c|;
     bless $self }
 
 sub DESTROY { }
@@ -28,7 +28,7 @@ sub tick                      {
       values %{$self->{trace}} }
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.1 );
+use version 0.77; our $VERSION = version->declare( v0.1.2 );
 
 use t::TestSuite qw| :temp :file :mthd :diag |;
 use File::AptFetch::Simple;
@@ -37,10 +37,10 @@ use Test::More;
 my( @units,  $dsrc,  @file,  @faux );
 my( $faf, $rv, $serr, $fdat, $sdat );
 
-my $msgv = qr{([-+]+X/s)};
-my $msgb = qr{([\d.]+b/s)};
-my $msgk = qr{([\d.]+K/s)};
-my $msgm = qr{([\d.]+M/s)};
+my $msgv = qr{\Atag-b29c\x5b([perl5]+X/s)\x5d};
+my $msgb = qr{\Atag-b29c\x5b([ \d.]+b/s)\x5d};
+my $msgk = qr{\Atag-b29c\x5b([ \d.]+K/s)\x5d};
+my $msgm = qr{\Atag-b29c\x5b([ \d.]+M/s)\x5d};
 
 @units =
 ([{ tag => q|tag+3413|, init => !0 },

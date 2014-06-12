@@ -1,4 +1,4 @@
-# $Id: Simple.pm 501 2014-05-14 22:19:48Z whynot $
+# $Id: Simple.pm 505 2014-06-12 20:42:49Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,12 +7,13 @@ use strict;
 use warnings;
 
 package File::AptFetch::Simple;
-use version 0.77; our $VERSION = version->declare( v0.1.4 );
+use version 0.77; our $VERSION = version->declare( v0.1.5 );
 use base qw| File::AptFetch |;
 
 use Carp;
 use Cwd              qw| abs_path |;
 use String::Truncate qw|    elide |;
+use List::Util       qw| shuffle |;
 
 =head1 NAME
 
@@ -111,8 +112,7 @@ any option used in C<cUM> sets for this invocation.
 (optional, TRUE.)
 That's the first progress reporting option --
 this one is user-friendly.
-B<(note)>
-It's totally underdeveloped right now -- nothing to document yet.
+L</_select_callback()> has detailed description.
 B<(bug)>
 Default should depend on I<STDERR> being visible in terminal.
 
@@ -163,10 +163,13 @@ Else B<F::AF::S> could do it for you.
 (optional, TRUE.)
 That's the second progress reporting option --
 this one is log-friendly.
-Overwrites I<$options{beat}>'s output (unless I<$options{beat}> is disabled).
+Overwrites I<$options{beat}>'s output (if any).
 Tries to be terminal saving too.
 B<(bug)>
 Should actually detect if there's any terminal on I<STDERR>.
+
+Hints for filename and what APT method has said about it.
+Not much.
 
 =back
 
@@ -251,7 +254,7 @@ Should dump the damn message.
 
 =cut
 
-my %stat = ( mark => time );
+my %stat = ( mark => time, trace => [ ] );
 sub request {
     my( $class, $args, @subj ) = @_;
     my $self;
@@ -312,6 +315,7 @@ sub request {
         my $fnm = elide $fn, 25, { truncate => q|left| };
         if( grep $self->{Status} == $_, qw| 201 400 401 402 403 |) {
             delete $self->{trace}{$fn}                              }
+# TODO:201406121825:whynot: Be more infomative, plz.
         print STDERR qq|$self->{cheat_beat}($fnm): ($self->{status})\n|      if
           $wink                 }
     delete $self->{cheat_beat};
@@ -335,33 +339,157 @@ sub _read_callback {
         $stat{activity}++ }
                 $rv }
 
+=item B<get_oscillator()>
+
+Service routine for L</_select_callback()>.
+It's public (in contrary with) because one day it will accept configuration
+for oscillator.
+Returns five bytes that somehow represent transfer went sleep.
+
+=cut
+
+my @void = qw| p e r l 5 |;
+sub get_oscillator { join( '', @void = shuffle @void ) . q|X/s| }
+
 =item B<_select_callback()>
 
-This one does actual beat indicator.
-Unless forbidden (I<beat> of I<%opts> of L</B<request()>>) then harmless.
+This one does actual beat indicator,
+unless forbidden (I<beat> of I<%opts> of L</B<request()>>).
+Even if forbidden statistics is collected anyway.
+Beat looks like this
+
+    [19.55M/s] [17.72M/s  4.36M/s  3.48M/s]
+
+B<(bug)>
+Beats are output completely terminal blind --
+no cleanups, no width checks;
+simple leading C<\r>.
+.
+
+Beats are made with each I<$tick>.
+In brackets are:
+
+=over
+
+=item *
+
+Speed over last tick.
+
+=item *
+
+SMA of speed calculated over 5sec, 1min, and 5min.
+As long as a subset haven't been accumulated they won't be shown
+(however, due timer early initialization 5sec SMA will probably appear
+instantly).
+Subsets are package wide -- probably B<bug>
+(problem is sampling is made in L</_read_callback> what doesn't know about
+object).
+Subsets are kept between invocations;
+what gives, different transports obviously perform differently,
+transfers over different paths obviously perform differently --
+that doesn't mix well.
+But being an eye candy, well, it could stay this way forever.
+
+=back
+
+B<(bug)>
+Subset ranges should be configurable.
+
+B<(bug)>
+Final performance isn't left visible for further eye candy.
+
+If transfer get stuck then speed is present with an oscillator --
+you really don't want to know what it is, you gonna hate it.
+B<(note)>
+Now, when transfer speed goes to ground so does SMA
+(that's what SMA is by design after all);
+then, if transfer stalls long enough with probability ~50% SMA will hit
+through C<0> and go negative
+(rounding errors);
+it was decided to present it with oscillator
+(that one you already hate).
+And when it stays positive it will be C<0.00b/s>.
+(Those rounding errors are really small -- ~0.5e-8 small.)
+
+Speeds are based on 1024.
+Format is C<%5.2f>.
+With prefixes only -- no unit;
+unless there should not be any prefix -- then lone C<b> is used.
+Supported prefixes are:
+C<kilo>, C<mega>, C<giga>, C<tera>, C<peta>, C<exa>, C<zetta>, and C<yotta>
+(or C<kibi>, C<mebi>, C<gibi>, C<tebi>, C<pebi>, C<exbi>, C<zibi>, and
+C<yebi>, to make IEC happy)
+(hard to imagine speeds like that).
+
+B<(note)>
+Due control-flow just after any C<200 URI Start> message
+B<_select_callback()> is invoked before L</_read_callback()> what does
+housekeeping.
+Thus before L</_read_callback()> is invoked there's no sings transfer making
+any progress.
+That's presented with
+
+    {{{ NOTHING HAPPENING!!! }}}
+
+message what will stay for one I<$tick> and will be overwritten with, at
+least,
+
+    [ 0.00b/s] []
+
+Maybe more.
 
 =cut
 
 my @marks = qw| b K M G T P E Z Y |;
-my @void = qw| - - - - + |;
+my @indexes = ( 5, 60, 300 );
 
 sub _select_callback                {
     my $faf = shift;
-    $faf->{cheat_beat}              or return delete @stat{qw| inc activity |};
-    my $sm;
+    my $sm = [ ];
     my $mark = time - $stat{mark} || 1;
     unless( exists $stat{inc} || $stat{activity} )       {
-        $sm = q|{{{ NOTHING HAPPENING!!! }}}|             }
+        $sm->[0] = undef                                  }
     elsif( !$stat{inc} && $stat{activity} )              {
         unshift @void, pop @void;
-        $sm = sprintf q|[%sX/s]|, join '', @void          }
+        push @$sm, get_oscillator                         }
     else                                                 {
         my $fix = 0;
+# TODO:201406061509:whynot: Now that's gross;  go B<ceil()> asap, plz.
         $fix++                                   until 100 > sprintf q|%5.2f|,
-          $stat{inc} / $mark / 1024 ** $fix;
-        $sm = sprintf q|[%5.2f%s/s]|,
-          $stat{inc} / $mark / 1024 ** $fix, $marks[$fix] }
-    print STDERR qq|$faf->{cheat_beat}$sm |;
+          $stat{inc} / $mark / 2**($fix*10);
+        push @$sm, sprintf q|%5.2f%s/s|,
+          $stat{inc} / $mark / 2**($fix*10), $marks[$fix] }
+    $stat{inc} ||= 0;
+    my $bit = $stat{inc} / $mark;
+    unshift @{$stat{trace}}, ( $bit ) x $mark;
+    push @$sm, [ ];
+    for( my $ix = 0; $ix < @indexes; $ix++ )             {
+        if( @{$stat{trace}} < $indexes[$ix] )                    { next }
+        unless( $stat{speeds}[$ix] )                                   {
+            $stat{speeds}[$ix] += $_                                   foreach
+              @{$stat{trace}}[0 ..  $indexes[$ix]-1];
+            $stat{speeds}[$ix] /= $indexes[$ix]                         }
+        else                                                           {
+            $stat{speeds}[$ix] += $_/$indexes[$ix]                     foreach
+              @{$stat{trace}}[0 ..  $mark-1],
+              map -$_,
+                @{$stat{trace}}[$indexes[$ix] .. $indexes[$ix]+$mark-1] }
+# XXX:201406081721:whynot: And it really is.  Not mine, that's rounding error.
+        if( $stat{speeds}[$ix] < 0 )               {
+            push @{$sm->[-1]}, get_oscillator; next }
+        my $fix = 0;
+# TODO:201406081723:whynot: And here (B<ceil()>).
+        $fix++                                                           until
+          100 > sprintf q|%5.2f|, $stat{speeds}[$ix] / 2**($fix * 10);
+        push @{$sm->[-1]}, sprintf q|%5.2f%s/s|,
+          $stat{speeds}[$ix] / 2**($fix*10), $marks[$fix] }
+
+    pop @{$stat{trace}}                   while @{$stat{trace}} > $indexes[2];
+
+    if( $faf->{cheat_beat} )                   {
+        $sm = !defined $sm->[0] ? q|{{{ NOTHING HAPPENING!!! }}}| :
+          sprintf qq|[%s] [%s]|, $sm->[0], join ' ', @{$sm->[1]};
+        print STDERR qq|$faf->{cheat_beat}$sm | }
     $stat{mark} = time;
     delete @stat{qw| inc activity |} }
 

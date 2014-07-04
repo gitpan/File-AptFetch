@@ -1,4 +1,4 @@
-# $Id: set_callback.t 505 2014-06-12 20:42:49Z whynot $
+# $Id: set_callback.t 506 2014-07-04 18:07:33Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.5 );
+use version 0.77; our $VERSION = version->declare( v0.1.6 );
 
 use t::TestSuite qw| :temp :mthd :file :diag |;
 use File::AptFetch;
@@ -92,15 +92,8 @@ like $rv, qr{tag.7175}, q|sets [gain] callback|;
 my( $diag, $log ) = ( $faf->{diag}, $faf->{log} );
 undef $faf;
 $serr = FAFTS_get_file $stderr;
-unless( $serr =~ qr{600 URI Acquire} ) { SKIP: {
-    my $ix = 0;
-    diag q|{@diag}:|; diag sprintf q|[%3i] %s|, $ix++, $_      foreach @$diag;
-    diag q|{@log}:|; diag sprintf q|[%3i] %s|, $ix++, $_        foreach @$log;
-    diag q|{STDERR}:|; diag $serr;
-    skip q|tag+576b busted|, 1;
-    ok 1, q|tag+576b {STDERR} is empty| }       }
-else                                           {
-    ok 1, q|tag+576b {STDERR} is empty|         }
+# XXX:201407032140:whynot: Resolved, problem was with F<t/v-method> being totally lame.
+like $serr, qr{600 URI Acquire}, q|tag+576b {STDERR} is empty|;
 
 $fsrc = FAFTS_tempfile nick => q|ftag5551|, dir => $arena;
 $ftrg = FAFTS_tempfile nick => q|ftage821|, dir => $arena;

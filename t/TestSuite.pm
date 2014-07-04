@@ -1,4 +1,4 @@
-# $Id: TestSuite.pm 505 2014-06-12 20:42:49Z whynot $
+# $Id: TestSuite.pm 506 2014-07-04 18:07:33Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -10,7 +10,7 @@ package DB;
 sub get_fork_TTY { xterm_get_fork_TTY() }
 
 package t::TestSuite;
-use version 0.77; our $VERSION = version->declare( v0.1.7 );
+use version 0.77; our $VERSION = version->declare( v0.1.8 );
 # TODO:201406091242:whynot: Go B<parent()> whenever possible (perl v5.10.0 or something).
 # http://www.cpantesters.org/cpan/report/5947de70-df50-11e3-a498-53c68706f0e4
 use base   qw| Exporter |;
@@ -21,16 +21,12 @@ use Module::Build;
 use Cwd;
 use File::Temp qw| tempfile tempdir |;
 
-our @EXPORT_OK =
-qw| FAFTS_diag                       FAFTS_show_message
-    FAFTS_tempfile                        FAFTS_tempdir
-    FAFTS_prepare_method FAFTS_wrap FAFTS_wait_and_gain
-    FAFTS_get_file   FAFTS_set_file   FAFTS_append_file |;
 our %EXPORT_TAGS =
 ( diag => [qw| FAFTS_diag                       FAFTS_show_message |],
-  temp => [qw| FAFTS_tempfile                        FAFTS_tempdir |],
+  temp => [qw| FAFTS_tempfile      FAFTS_tempdir      FAFTS_cat_fn |],
   mthd => [qw| FAFTS_prepare_method FAFTS_wrap FAFTS_wait_and_gain |],
   file => [qw| FAFTS_get_file   FAFTS_set_file   FAFTS_append_file |] );
+our @EXPORT_OK = map @$_, values %EXPORT_TAGS;
 our $Empty_MD5 = q|d41d8cd98f00b204e9800998ecf8427e|;
 
 $ENV{PERL5LIB} = getcwd . q(/blib/lib);
@@ -254,6 +250,20 @@ sub FAFTS_tempdir ( % ) {
       DIR => $args{dir}, SUFFIX => $args{suffix}, CLEANUP => 1;
     $dn = sprintf q|%s/%s|, cwd, $dn                        unless $args{dir};
     return $dn           }
+
+=item B<FAFTS_cat_fn()>
+
+    use t::TestSuite qw/ :temp /;
+    $new_file = FAFTS_cat_fn $new_dir, $old_file;
+
+A helper routine.
+Assists with a target filename preparation.
+Returns a basename of I<$old_file> concatenated with I<$new_dir>.
+B<(note)> Stolen from DFS (should've been done years ago).
+
+=cut
+
+sub FAFTS_cat_fn ( $$ ) { sprintf q|%s/%s|, shift, ( split m{/}, shift )[-1] }
 
 =item B<FAFTS_get_file()>
 

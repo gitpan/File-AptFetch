@@ -29,6 +29,7 @@ t/select-callback/simple.t
 t/simple/0.t
 t/simple/copy.t
 t/simple/fail.t
+t/simple/file.t
 t/simple/wink.t
 t/TestSuite.pm
 t/v-method

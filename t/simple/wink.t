@@ -1,4 +1,4 @@
-# $Id: wink.t 505 2014-06-12 20:42:49Z whynot $
+# $Id: wink.t 506 2014-07-04 18:07:33Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.1 );
+use version 0.77; our $VERSION = version->declare( v0.1.2 );
 
 use t::TestSuite qw| :mthd :temp |;
 use File::AptFetch::Simple;
@@ -37,8 +37,11 @@ $fsrc = FAFTS_tempfile
   File::AptFetch::Simple->request(
   { method => q|copy|, location => $dtrg }, $fsrc ) };
 isa_ok $fafs, q|File::AptFetch::Simple|, q|[init]|;
-like $serr, qr{(?m)^\V+_ftagdd5f_\V+\(URI Start\)\V*$}, q|URI Start|;
-like $serr, qr{(?m)^\V+_ftagdd5f_\V+\(URI Done\)\V*$}, q|URI Done|;
+# http://www.cpantesters.org/cpan/report/ab66a7d6-f288-11e3-a9ed-95bae0bfc7aa
+# TODO:201407031530:whynot: C<qr/\V/> is of v5.10.
+my $vh = qr{[^\f\r\n]};
+like $serr, qr{(?m)^$vh+_ftagdd5f_$vh+\(URI Start\)$vh*$}, q|URI Start|;
+like $serr, qr{(?m)^$vh+_ftagdd5f_$vh+\(URI Done\)$vh*$}, q|URI Done|;
 
 $fsrc = FAFTS_tempfile
   nick => q|ftagd316|, dir => $dsrc, content => q|tag+65bd|;

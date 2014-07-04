@@ -1,4 +1,4 @@
-# $Id: Simple.pm 505 2014-06-12 20:42:49Z whynot $
+# $Id: Simple.pm 506 2014-07-04 18:07:33Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,13 +7,13 @@ use strict;
 use warnings;
 
 package File::AptFetch::Simple;
-use version 0.77; our $VERSION = version->declare( v0.1.5 );
+use version 0.77; our $VERSION = version->declare( v0.1.6 );
 use base qw| File::AptFetch |;
 
 use Carp;
 use Cwd              qw| abs_path |;
 use String::Truncate qw|    elide |;
-use List::Util       qw| shuffle |;
+use List::Util       qw|  shuffle |;
 
 =head1 NAME
 
@@ -109,12 +109,21 @@ any option used in C<cUM> sets for this invocation.
 
 =item I<$options{beat}>
 
-(optional, TRUE.)
+(optional, TRUE, I<v0.1.5>/I<v0.1.11>.)
 That's the first progress reporting option --
 this one is user-friendly.
-L</_select_callback()> has detailed description.
+L</B<_select_callback()>> has detailed description.
 B<(bug)>
 Default should depend on I<STDERR> being visible in terminal.
+
+=item I<$options{force_file}>
+
+(optional, FALSE, I<v0.1.6>/I<v0.1.12>.) 
+Disables C<file:> schema special handling (L</I<$options{method}>> has more).
+It's for setting in C<cCM> and is retained forever,
+in C<cUM> silently ignored.
+C<(caveat)> (probably bug)
+Doesn't affect L</I<$options{beat}>> and L</I<$options{wink}>>.
 
 =item I<$options{location}>
 
@@ -157,13 +166,14 @@ F</etc/apt/sources.list>
 But there's no URI of C<copy:> type,
 you should do that substitution yourself.
 Else B<F::AF::S> could do it for you.
+Seealso L</I<$options{force_file}>>.
 
 =item I<$options{wink}>
 
-(optional, TRUE.)
+(optional, TRUE, I<v0.1.5>/I<v0.1.11>.)
 That's the second progress reporting option --
 this one is log-friendly.
-Overwrites I<$options{beat}>'s output (if any).
+Overwrites L</I<$options{beat}>>'s output (if any).
 Tries to be terminal saving too.
 B<(bug)>
 Should actually detect if there's any terminal on I<STDERR>.
@@ -264,7 +274,10 @@ sub request {
           q|first must be either {$method} or {%options}|;
         $args = { method => $args }               unless q|HASH| eq ref $args;
         defined $args->{method}    or croak q|{$options{method}} is required|;
-        my $method = $args->{method} eq q|file| ? q|copy| : $args->{method};
+        $self->{force_file} = !!$args->{force_file}                         if
+          defined $args->{force_file};
+        my $method = $args->{method} eq q|file| && !$self->{force_file}      ?
+          q|copy| : $args->{method};
         $self = File::AptFetch->init( $method );
         ref $self                                              or croak $self;
         bless $self, $class;
@@ -296,7 +309,7 @@ sub request {
     $self->{cheat_beat} = $beat ? "\r" : '';
     my $rv = $self->SUPER::request( map  {
         my $src = $_;
-        $src =~ s{^file:}{copy:};
+        $src =~ s{^file:}{copy:}                   unless $self->{force_file};
         my $bnam = ( split m{/} )[-1];
         qq|$loc/$bnam| => { uri => $src } } @subj );
     $rv                                                         and croak $rv;
@@ -314,7 +327,11 @@ sub request {
             carp qq|got ($self->{status}) for ($fn) without [request]| }
         my $fnm = elide $fn, 25, { truncate => q|left| };
         if( grep $self->{Status} == $_, qw| 201 400 401 402 403 |) {
+            $self->{pending} -= $self->{trace}{$fn}{pending} || 0;
             delete $self->{trace}{$fn}                              }
+        elsif( $self->{Status} == 200                            ) {
+            $self->{pending} += $self->{trace}{$fn}{pending} =
+              $self->{message}{size}                                }
 # TODO:201406121825:whynot: Be more infomative, plz.
         print STDERR qq|$self->{cheat_beat}($fnm): ($self->{status})\n|      if
           $wink                 }
@@ -325,7 +342,7 @@ sub request {
 
 This does all required sampling for L</B<_select_callback()>>.
 Routine for L<B<_read>|File::AptFetch/_read> is provided by
-L<parent's callback|File::AptFetch/_read_callback>.
+L<parent's callback|File::AptFetch/_read_callback()>.
 
 =cut
 
@@ -341,7 +358,7 @@ sub _read_callback {
 
 =item B<get_oscillator()>
 
-Service routine for L</_select_callback()>.
+Service routine for L</B<_select_callback()>>.
 It's public (in contrary with) because one day it will accept configuration
 for oscillator.
 Returns five bytes that somehow represent transfer went sleep.
@@ -382,7 +399,7 @@ As long as a subset haven't been accumulated they won't be shown
 (however, due timer early initialization 5sec SMA will probably appear
 instantly).
 Subsets are package wide -- probably B<bug>
-(problem is sampling is made in L</_read_callback> what doesn't know about
+(problem is sampling is made in L</B<_read_callback()>> what doesn't know about
 object).
 Subsets are kept between invocations;
 what gives, different transports obviously perform differently,
@@ -423,9 +440,9 @@ C<yebi>, to make IEC happy)
 
 B<(note)>
 Due control-flow just after any C<200 URI Start> message
-B<_select_callback()> is invoked before L</_read_callback()> what does
+L</B<_select_callback()>> is invoked before L</B<_read_callback()>> what does
 housekeeping.
-Thus before L</_read_callback()> is invoked there's no sings transfer making
+Thus before L</B<_read_callback()>> is invoked there's no sings transfer making
 any progress.
 That's presented with
 
@@ -447,6 +464,9 @@ sub _select_callback                {
     my $faf = shift;
     my $sm = [ ];
     my $mark = time - $stat{mark} || 1;
+# NOTE:201407040056:whynot: Resources that were used to understand how it works:
+# http://en.wikipedia.org/wiki/Simple_moving_average#Simple_moving_average
+# http://cpansearch.perl.org/src/JETTERO/stockmonkey-2.9405/Business/SMA.pm
     unless( exists $stat{inc} || $stat{activity} )       {
         $sm->[0] = undef                                  }
     elsif( !$stat{inc} && $stat{activity} )              {

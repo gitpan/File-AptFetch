@@ -1,3 +1,13 @@
+  v0.1.12 20140704
+
+      *   Adding *$force_file* "cCM" option.
+
+      *   Going for time estimation (probably will be totally reworked)
+          (just a release excuse).
+
+      *   Attempt to fix for reals "tag+576b" bug (might affect
+          "tag+38a2" too); Rolling back "qr/\V/" (too early).
+
   v0.1.11 20140612
 
       *   Adding speed aproximation.  Changing oscillator; leads to new

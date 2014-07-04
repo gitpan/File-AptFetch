@@ -1,4 +1,4 @@
-# $Id: 0.t 505 2014-06-12 20:42:49Z whynot $
+# $Id: 0.t 506 2014-07-04 18:07:33Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.4 );
+use version 0.77; our $VERSION = version->declare( v0.1.5 );
 
 use t::TestSuite qw| :mthd :temp |;
 use File::AptFetch::Simple;
@@ -21,7 +21,7 @@ plan
   !defined $Apt_Lib ? ( skip_all => q|not *nix, or misconfigured| ) :
   !$Apt_Lib           ?     ( skip_all => q|not Debian, or alike| ) :
   !-x qq|$Apt_Lib/copy| ? ( skip_all => q|missing method [copy:]| ) :
-                                                    ( tests => 70 );
+                                                    ( tests => 72 );
 
 my( $dira, $dirb, $dirc );
 my( $fafs, $serr, $tmpl );
@@ -97,6 +97,14 @@ is_deeply { rv => qq|$fafs|, give_got }, $tmpl, q|tag+5f60 deeply|;
 ( $fafs, $serr ) = FAFTS_wrap { $fafs->request({ method => q|tag+d129| }) };
 isa_ok $fafs, q|File::AptFetch::Simple|, q|tag+83b5 cUM {%options}|;
 is_deeply { rv => qq|$fafs|, give_got }, $tmpl, q|tag+4374 deeply|;
+
+( $fafs, $serr ) = FAFTS_wrap { File::AptFetch::Simple->request(
+{ method => q|file|, force_file => !0 }) };
+$tmpl->{method} = q|file|;
+delete $tmpl->{rv};
+isa_ok $fafs, q|File::AptFetch::Simple|, q|{force_file} cCM|;
+is_deeply { give_got }, $tmpl, q|tag+ed5b deeply|;
+$tmpl->{rv} = qq|$fafs|;
 
 $dira = FAFTS_tempdir nick => q|dtag3889|;
 ( $fafs, $serr ) = FAFTS_wrap                                              {

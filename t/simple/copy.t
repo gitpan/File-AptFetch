@@ -1,4 +1,4 @@
-# $Id: copy.t 506 2014-07-04 18:07:33Z whynot $
+# $Id: copy.t 510 2014-08-11 13:26:00Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.4 );
+use version 0.77; our $VERSION = version->declare( v0.1.5 );
 
 use t::TestSuite qw| :mthd :temp :file |;
 use File::AptFetch::Simple;
@@ -57,7 +57,7 @@ isa_ok $fafs, q|File::AptFetch::Simple|, q|sCM|;
 is $serr, '', q|tag+4456 {STDERR} is empty|;
 $tmpl =
 { rv => qq|$fafs|, stderr => '', status => 201, log => [ ],
-  mark => 0,                                  pending => 0 };
+  mark => 0,                                  pending => 8 };
 
 $fsra = FAFTS_tempfile
   nick => q|ftag9017|, dir => $dira, content => q|tag+d3c9|;
@@ -210,5 +210,8 @@ push @purg, $ftga = FAFTS_cat_fn q|.|, $fsra;
 ( $rv, $serr ) = FAFTS_wrap { $fafs->request( $fsra ) };
 is_deeply give_got( q|tag+338a| ), { %$tmpl, file => FAFTS_get_file $fsra },
   q|[file] is [copy]|;
+
+undef $fafs; $fafs = '';
+undef $rv; $rv = '';
 
 # vim: syntax=perl

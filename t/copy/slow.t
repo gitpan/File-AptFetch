@@ -1,4 +1,4 @@
-# $Id: slow.t 498 2014-04-02 19:19:15Z whynot $
+# $Id: slow.t 510 2014-08-11 13:26:00Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.2 );
+use version 0.77; our $VERSION = version->declare( v0.1.3 );
 
 use t::TestSuite qw| :temp :mthd :diag |;
 use File::AptFetch;
@@ -65,12 +65,12 @@ plan
   !defined $TS_Conf        ?   ( skip_all => q|can't read config| ) :
   !$TS_Conf                   ?   ( skip_all => q|not configured| ) :
   !$TS_Conf->{copy_slow}{block}   ?    ( skip_all => q|forbidden| ) :
-                                              ( tests => 3 + 5*12 );
+                                               ( tests => 3 + 5*8 );
 
 my $tdpa = q|might fail for extremely unfair {tick} (%s)|;
 my $tdpb = q|might fail for unfair {tick} (%s)|;
 
-sub just_do_it ( $$ )                       {
+sub just_do_it ( $$ )                            {
 
     $tag = shift;
     $faf->{tick} = $_[0];
@@ -107,16 +107,6 @@ sub just_do_it ( $$ )                       {
     FAFTS_show_message %{$faf->{trace}{$furi}};
     FAFTS_diag q|+++ there're all except last +++|;
     FAFTS_show_message %$_                                      foreach @data;
-    TODO:          {
-        local $TODO = sprintf $tdpa,
-          File::AptFetch::ConfigData->config( q|tick| );
-        cmp_ok @data, q|<|, 3, sprintf qq|$tag there're ticks (%i)|,
-          @data - 1 }
-    TODO:                                                                  {
-        local $TODO = sprintf $tdpa,
-          File::AptFetch::ConfigData->config( q|tick| );
-        cmp_ok $faf->{trace}{$furi}{flag}, q|>|, 1,
-          qq|$tag there're spare {tick}s left ($faf->{trace}{$furi}{flag})| }
     $tick = 1;
     $tick++           while defined $data[$tick] && defined $data[$tick]{tmp};
     FAFTS_diag q|+++ that's TP +++|;
@@ -130,22 +120,9 @@ sub just_do_it ( $$ )                       {
       uri => qq|copy:$fsrc|, size => -s $fsrc                    },
                                         qq|$tag (URI Done) [gain]|;
     SKIP:                                                         {
-        skip qq|$tag tag+56ca no samples|, 2                    unless defined
+        skip qq|$tag tag+56ca no samples|, 1                    unless defined
           $faf->{trace}{$furi}{tmp};
-        TODO:                      {
-            local $TODO = sprintf $tdpb,
-              File::AptFetch::ConfigData->config( q|tick| );
-            cmp_ok $faf->{trace}{$furi}{factor}, q|==|, 1,
-              qq|$tag {factor} > 1| }
         is $faf->{trace}{$furi}{size}, -s $fsrc, q|{size} is size| }
-    SKIP:                               {
-        skip qq|$tag tag+611c no samples|, 1                            unless
-          2 < @data && defined $data[-2]{tmp};
-        TODO:                          {
-            local $TODO = sprintf $tdpb,
-              File::AptFetch::ConfigData->config( q|tick| );
-            isnt $faf->{trace}{$furi}{back}, -s $fsrc,
-              qq|$tag {back} == {size}| }}
     SKIP:                              {
       skip qq|$tag tag+afa8 no samples|, 1                unless $data[$tick];
       isnt $data[$tick]{size}, $data[$tick]{back},
@@ -162,8 +139,10 @@ sub just_do_it ( $$ )                       {
       skip qq|$tag tag+92e6 no samples|, 1              unless $data[$tick+2];
       is $data[$tick+2]{size}, $data[$tick+2]{back},
         qq|$tag {size} == {back} after after TP| }
-    isnt $data[$tick-1]{filename}, $data[$tick-1]{tmp},
-      qq|$tag {filename} ne {tmp} before TP| }
+    SKIP:                                       {
+        skip qq|$tag tag+a9f2 no samples|, 1              unless $data[$tick];
+        isnt $data[$tick-1]{filename}, $data[$tick-1]{tmp},
+          qq|$tag {filename} ne {tmp} before TP| }}
 
 $dsrc = FAFTS_tempdir
   nick => q|dtag9b89|, dir => $TS_Conf->{copy_slow}{source}{dir};

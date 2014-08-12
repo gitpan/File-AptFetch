@@ -1,4 +1,4 @@
-# $Id: simple.t 505 2014-06-12 20:42:49Z whynot $
+# $Id: simple.t 510 2014-08-11 13:26:00Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -9,14 +9,10 @@ use warnings;
 package t::TestSuite::FAFS;
 use base qw| File::AptFetch::Simple |;
 
-sub request    {
+sub request                                                       {
     shift;
     my $args = shift;
-    my $self = { };
-    $self->{trace} = $args;
-    $self->{pid} = -1;
-    $self->{cheat_beat} = q|tag-b29c|;
-    bless $self }
+    bless { trace => $args, pid => -1, cheat_beat => q|tag-b29c| } }
 
 sub DESTROY { }
 
@@ -28,7 +24,7 @@ sub tick                      {
       values %{$self->{trace}} }
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.2 );
+use version 0.77; our $VERSION = version->declare( v0.1.3 );
 
 use t::TestSuite qw| :temp :file :mthd :diag |;
 use File::AptFetch::Simple;
@@ -50,7 +46,7 @@ my $msgm = qr{\Atag-b29c\x5b([ \d.]+M/s)\x5d};
       @faux = ( (File::Temp::tempfile
         +(split m{/}, $file[0])[-1] . q|_XXXX|, DIR => $dsrc)[-1] );
       unlink @faux                 }                                ],
- [{ tag => q|tag+b835|, stderr => qr{NOTHING} }, sub { }, [ '',  1 ]],
+ [{ tag => q|tag+b835|, stderr => qr{^$} }, sub { }, [ '',  1 ]     ],
  [{ tag => q|tag+d742|, stderr => $msgv },
   sub {   FAFTS_set_file $faux[0] => '' },
   [                               '', 1 ]                           ],

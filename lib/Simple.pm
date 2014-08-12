@@ -1,4 +1,4 @@
-# $Id: Simple.pm 506 2014-07-04 18:07:33Z whynot $
+# $Id: Simple.pm 510 2014-08-11 13:26:00Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,13 +7,14 @@ use strict;
 use warnings;
 
 package File::AptFetch::Simple;
-use version 0.77; our $VERSION = version->declare( v0.1.6 );
+use version 0.77; our $VERSION = version->declare( v0.1.7 );
 use base qw| File::AptFetch |;
 
 use Carp;
 use Cwd              qw| abs_path |;
 use String::Truncate qw|    elide |;
 use List::Util       qw|  shuffle |;
+use POSIX            qw|     ceil |;
 
 =head1 NAME
 
@@ -314,7 +315,7 @@ sub request {
         qq|$loc/$bnam| => { uri => $src } } @subj );
     $rv                                                         and croak $rv;
 
-    while( %{$self->{trace}} ) {
+    while( %{$self->{trace}} )                               {
         $rv = $self->SUPER::gain;
         $rv                                                     and croak $rv;
         my $fn = $self->{message}{uri};
@@ -327,16 +328,34 @@ sub request {
             carp qq|got ($self->{status}) for ($fn) without [request]| }
         my $fnm = elide $fn, 25, { truncate => q|left| };
         if( grep $self->{Status} == $_, qw| 201 400 401 402 403 |) {
-            $self->{pending} -= $self->{trace}{$fn}{pending} || 0;
-            delete $self->{trace}{$fn}                              }
-        elsif( $self->{Status} == 200                            ) {
-            $self->{pending} += $self->{trace}{$fn}{pending} =
-              $self->{message}{size}                                }
+            delete $self->{trace}{$fn};
+            print STDERR "\n"                              if $wink }
+        elsif( $self->{Status} == 200                            ) {}
 # TODO:201406121825:whynot: Be more infomative, plz.
-        print STDERR qq|$self->{cheat_beat}($fnm): ($self->{status})\n|      if
-          $wink                 }
+        printf STDERR qq|%s(%s): (%s)\n|,
+          $self->{cheat_beat}, $fnm, $self->{status} if $wink }
     delete $self->{cheat_beat};
        $self }
+
+=item B<_gain_callback()>
+
+This finishes size sampling for L</B<_select_callback()>> (if applicable).
+Also does a significant number of assertions (most probably useless).
+
+=cut
+
+sub _gain_callback           {
+    my $slf = shift;
+    defined $slf->{message}{uri}                                    or return;
+    my $fn = $slf->{message}{uri};
+    $slf->{trace}{$fn} && defined $slf->{message}{size}             or return;
+# NOTE:201408010056:whynot: There're two points where I<Size:> appears: C<200> and C<201>/C<400>/...  Even if sizes mismatch it's too late to update.
+    $slf->{message}{size} =~ tr/0-9//c                             and return;
+    $slf->{trace}{$fn}{final_size} = $slf->{message}{size}      unless defined
+      $slf->{trace}{$fn}{final_size};
+    $slf->{pending} = 0;
+    $slf->{pending} += $_ || 0                   foreach map $_->{final_size},
+      values %{$slf->{trace}} }
 
 =item B<_read_callback()>
 
@@ -375,15 +394,16 @@ unless forbidden (I<beat> of I<%opts> of L</B<request()>>).
 Even if forbidden statistics is collected anyway.
 Beat looks like this
 
-    [19.55M/s] [17.72M/s  4.36M/s  3.48M/s]
+    [24.00K/s] [17.60K/s  4.36M/s  3.13M/s] [ 4.17h  0.99m  1.37m] 
 
 B<(bug)>
 Beats are output completely terminal blind --
 no cleanups, no width checks;
 simple leading C<\r>.
-.
 
 Beats are made with each I<$tick>.
+The very last beat (before finish wink) is left visisble.
+
 In brackets are:
 
 =over
@@ -406,14 +426,6 @@ what gives, different transports obviously perform differently,
 transfers over different paths obviously perform differently --
 that doesn't mix well.
 But being an eye candy, well, it could stay this way forever.
-
-=back
-
-B<(bug)>
-Subset ranges should be configurable.
-
-B<(bug)>
-Final performance isn't left visible for further eye candy.
 
 If transfer get stuck then speed is present with an oscillator --
 you really don't want to know what it is, you gonna hate it.
@@ -438,22 +450,34 @@ C<kilo>, C<mega>, C<giga>, C<tera>, C<peta>, C<exa>, C<zetta>, and C<yotta>
 C<yebi>, to make IEC happy)
 (hard to imagine speeds like that).
 
-B<(note)>
-Due control-flow just after any C<200 URI Start> message
-L</B<_select_callback()>> is invoked before L</B<_read_callback()>> what does
-housekeeping.
-Thus before L</B<_read_callback()>> is invoked there's no sings transfer making
-any progress.
-That's presented with
+=item *
 
-    {{{ NOTHING HAPPENING!!! }}}
+SMAs are used to estimate times to finish.
+Because SMAs are running and run differently so estimations will be different
+too
+(it's fun to watch them).
 
-message what will stay for one I<$tick> and will be overwritten with, at
-least,
+In some circumstances estimations can get really high or negative
+(that's an example, there's no way it could be for real):
 
-    [ 0.00b/s] []
+    [1MEGAy 99.99y  0.00s]
 
-Maybe more.
+Those are placeholders and should be ignored
+(I just can't think a better way to handle those corner cases).
+B<(bug)>
+As of negative estimations I can't debug them right now --
+ought to do my homework first.
+
+Estimations are expressed in up to 30sec, 30min, 6hour, or forever
+(10hour is really forever if you think about it).
+
+=back
+
+B<(bug)>
+Subset ranges should be configurable.
+
+B<(bug)>
+Final performance isn't left visible for further eye candy.
 
 =cut
 
@@ -467,25 +491,25 @@ sub _select_callback                {
 # NOTE:201407040056:whynot: Resources that were used to understand how it works:
 # http://en.wikipedia.org/wiki/Simple_moving_average#Simple_moving_average
 # http://cpansearch.perl.org/src/JETTERO/stockmonkey-2.9405/Business/SMA.pm
-    unless( exists $stat{inc} || $stat{activity} )       {
-        $sm->[0] = undef                                  }
-    elsif( !$stat{inc} && $stat{activity} )              {
+    unless( exists $stat{inc} || $stat{activity} )   {
+        $sm->[0] = undef                              }
+    elsif( !$stat{inc} && $stat{activity}        )   {
         unshift @void, pop @void;
-        push @$sm, get_oscillator                         }
-    else                                                 {
+        push @$sm, get_oscillator                     }
+    else                                             {
         my $fix = 0;
-# TODO:201406061509:whynot: Now that's gross;  go B<ceil()> asap, plz.
-        $fix++                                   until 100 > sprintf q|%5.2f|,
-          $stat{inc} / $mark / 2**($fix*10);
+        $fix++                 until 100 > ceil $stat{inc}/$mark/2**($fix*10);
         push @$sm, sprintf q|%5.2f%s/s|,
-          $stat{inc} / $mark / 2**($fix*10), $marks[$fix] }
+          $stat{inc}/$mark/2**($fix*10), $marks[$fix] }
     $stat{inc} ||= 0;
-    my $bit = $stat{inc} / $mark;
+    my $bit = $stat{inc}/$mark;
     unshift @{$stat{trace}}, ( $bit ) x $mark;
-    push @$sm, [ ];
-    for( my $ix = 0; $ix < @indexes; $ix++ )             {
+    push @$sm, [ ], [ ];
+    my $pending = $faf->{pending} || 0;
+    $pending -= $_       foreach map $_->{size} || 0, values %{$faf->{trace}};
+    for( my $ix = 0; $ix < @indexes; $ix++ )                           {
         if( @{$stat{trace}} < $indexes[$ix] )                    { next }
-        unless( $stat{speeds}[$ix] )                                   {
+        unless( $stat{speeds}[$ix]          )                          {
             $stat{speeds}[$ix] += $_                                   foreach
               @{$stat{trace}}[0 ..  $indexes[$ix]-1];
             $stat{speeds}[$ix] /= $indexes[$ix]                         }
@@ -495,26 +519,34 @@ sub _select_callback                {
               map -$_,
                 @{$stat{trace}}[$indexes[$ix] .. $indexes[$ix]+$mark-1] }
 # XXX:201406081721:whynot: And it really is.  Not mine, that's rounding error.
-        if( $stat{speeds}[$ix] < 0 )               {
-            push @{$sm->[-1]}, get_oscillator; next }
+        if( $stat{speeds}[$ix] < 0 ) {
+            push @{$sm->[1]}, get_oscillator;
+            push @{$sm->[2]}, q|1MEGAy|;
+                                 next }
         my $fix = 0;
-# TODO:201406081723:whynot: And here (B<ceil()>).
-        $fix++                                                           until
-          100 > sprintf q|%5.2f|, $stat{speeds}[$ix] / 2**($fix * 10);
-        push @{$sm->[-1]}, sprintf q|%5.2f%s/s|,
-          $stat{speeds}[$ix] / 2**($fix*10), $marks[$fix] }
+        $fix++             until 100 > ceil $stat{speeds}[$ix]/2**($fix * 10);
+        push @{$sm->[1]}, sprintf q|%5.2f%s/s|,
+          $stat{speeds}[$ix]/2**($fix*10), $marks[$fix];
+        my $lag = $pending/($stat{speeds}[$ix] || 1);
+        push @{$sm->[2]}, sprintf q|%5.2f%s|,
+          !$stat{speeds}[$ix] || $lag > 432000 ? ( 99.99,      q|y| ) :
+          $lag > 43200                         ? ( $lag/86400, q|d| ) :
+          $lag > 1800                          ? ( $lag/3600,  q|h| ) :
+          $lag > 30                            ? ( $lag/60,    q|m| ) :
+                                                 ( $lag,       q|s| )   }
 
     pop @{$stat{trace}}                   while @{$stat{trace}} > $indexes[2];
 
-    if( $faf->{cheat_beat} )                   {
-        $sm = !defined $sm->[0] ? q|{{{ NOTHING HAPPENING!!! }}}| :
-          sprintf qq|[%s] [%s]|, $sm->[0], join ' ', @{$sm->[1]};
-        print STDERR qq|$faf->{cheat_beat}$sm | }
+    printf STDERR qq|%s[%s] [%s] [%s] |,        $faf->{cheat_beat},
+      $sm->[0], join( ' ', @{$sm->[1]} ), join( ' ', @{$sm->[2]} )          if
+      $faf->{cheat_beat} && defined $sm->[0];
     $stat{mark} = time;
     delete @stat{qw| inc activity |} }
 
 File::AptFetch::set_callback
-  read => \&_read_callback, select => \&_select_callback;
+  read   =>   \&_read_callback,
+  select => \&_select_callback,
+  gain   =>   \&_gain_callback;
 
 =back
 

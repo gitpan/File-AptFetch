@@ -1,4 +1,4 @@
-# $Id: fail.t 506 2014-07-04 18:07:33Z whynot $
+# $Id: fail.t 510 2014-08-11 13:26:00Z whynot $
 # Copyright 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU GPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 package main;
-use version 0.77; our $VERSION = version->declare( v0.1.4 );
+use version 0.77; our $VERSION = version->declare( v0.1.5 );
 
 use t::TestSuite qw| :mthd :temp |;
 use File::AptFetch::Simple;
@@ -58,7 +58,7 @@ is_deeply
   mark => scalar keys %{$fafs->{trace}}, pending => $fafs->{pending},
                                                    file => !-f $ftrg },
 { stderr => '', status => 400, log => [ ],
-  mark => 0,                 pending => 0,
+  mark => 0,                 pending => undef,
                                file => !0     }, q|missing is missing|;
 
 # vim: syntax=perl

@@ -1,3 +1,11 @@
+  v0.1.13 20140811
+
+      *   Working time-to-finish estimation has been added.
+
+      *   Dropping scary "NOTHING".
+
+      *   Silencing t/simple/copy.t and t/simple/file.t.
+
   v0.1.12 20140704
 
       *   Adding *$force_file* "cCM" option.

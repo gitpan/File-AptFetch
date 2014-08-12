@@ -1,4 +1,4 @@
-# $Id: AptFetch.pm 506 2014-07-04 18:07:33Z whynot $
+# $Id: AptFetch.pm 510 2014-08-11 13:26:00Z whynot $
 # Copyright 2009, 2010, 2014 Eric Pozharski <whynot@pozharski.name>
 # GNU LGPLv3
 # AS-IS, NO-WARRANTY, HOPE-TO-BE-USEFUL
@@ -7,7 +7,7 @@ use warnings;
 use strict;
 
 package File::AptFetch;
-use version 0.77; our $VERSION = version->declare( v0.1.12 );
+use version 0.77; our $VERSION = version->declare( v0.1.13 );
 
 use File::AptFetch::ConfigData;
 use Carp;
@@ -19,7 +19,7 @@ File::AptFetch - perl interface onto APT-Methods
 
 =head1 SYNOPSIS
 
-# TODO:
+    use File::AptFetch::Simple; # No, seriously.
 
 =head1 DESCRIPTION
 
@@ -195,6 +195,45 @@ stupid.
 Thus, if you run B<perl-5.10.0> (probably any earlier too) destroy the
 B<File::AptFetch> object explicitly before B<exit>ing app, if you care about
 to be not I<$SIG{CHLD}>ed.
+
+B<(note)>
+Some believe that since I<v0.1.11> it ain't no issue anymore.
+
+=head1 IMPORTANT NOTE ON B<LINUX>
+
+Your script (or, more probably, one-liner) could exit with I<$CHILD_ERROR>
+equal to I<$SIG{TERM}> (or whatever signal was configured
+(I<$F::AF::ConfigData{signal}>).
+It would look like your script was B<kill>ed.
+It's not.
+I've strace'd, I don't see an incoming signal.
+
+My understanding is that B<fork> of linux is too thready.
+Then when an object (it has to be global) is B<DESTROY>ed a method (what is a
+child) indeed is B<kill>ed.
+And it's I<$CHILD_ERROR> somehow propagates up to the parent.
+However that propagation isn't reliable;
+in some combinations of kernel, libc, and/or perl
+and (that's important) *your* code probability of propagation reaches to ~1;
+for other combinations it goes down to ~0.
+E.g. comparse these, the only diffence is size of I<nvtype>:
+L<C<double>|http://www.cpantesters.org/cpan/report/a747458a-03c1-11e4-99f1-ef7f0a370852>
+and
+L<C<long double>|http://www.cpantesters.org/cpan/report/ecc8ed5a-0666-11e4-a7dd-06790a370852>,
+version of B<ExtUtils::MakeMaker> and definition of I<$ENV{LANG}>.
+But there're failures with I<nvtype=>C<long double> too.
+
+If that's ever a problem you should apply a simple work-around:
+
+    $faf = File::AptFetch->init( ... );
+    ...
+    undef $faf;
+    $faf = '';
+
+The last assignment is essential.
+I don't suggest that B<DESTROY> would be optimized away;
+it just sneaks into final destroy-everything phase then.
+From what the propagation raises.
 
 =head1 METHODS
 

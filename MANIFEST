@@ -22,6 +22,7 @@ t/file/one.t
 t/file/two.t
 t/ftp/0.t
 t/ftp/slow.t
+t/gain-callback/simple.t
 t/read-callback/default.t
 t/read-callback/simple.t
 t/ReadCallback.pm
